@@ -13,7 +13,7 @@ BASIC = {
     "phone": "电话", "email": "邮箱", "birthDate": "出生日期", "age": "年龄",
     "nationality": "国籍", "ethnicity": "民族", "politicalStatus": "政治面貌",
     "maritalStatus": "婚姻状况", "idType": "证件类型", "idNumber": "身份证号",
-    "currentAddress": "现居住地址", "currentCity": "现居城市",
+    "currentAddress": "现居住地址",
     "nativePlace": "籍贯", "birthPlace": "生源地",
     "hukouType": "户口性质", "hukou": "户口所在地",
     "highestDegree": "最高学历", "highestDiploma": "学位",
@@ -22,13 +22,13 @@ BASIC = {
     "workYears": "工作年限", "lastCompany": "上一家公司",
     "wechat": "微信号", "qq": "QQ号", "homepage": "个人主页/作品链接",
     "englishLevel": "英语等级", "gaokaoDate": "高考时间", "gaokaoScore": "高考分数",
-    "gaokaoSubjects": "高考科目", "techTitle": "专业技术职级",
+    "gaokaoSubjects": "高考科目", "techTitle": "专业技术职称",
     "emergencyContactName": "紧急联系人姓名", "emergencyContactRelation": "紧急联系人关系",
     "emergencyContactPhone": "紧急联系人电话", "postalCode": "邮政编码",
     "health": "健康状况", "hasChronicDisease": "是否有长期病史",
     "hasCriminalRecord": "是否有犯罪记录", "hasMilitaryService": "是否服兵役",
     "isVeteran": "是否退伍军人", "bloodType": "血型",
-    "partyJoinDate": "入党时间", "leagueJoinDate": "入团时间",
+    "leagueJoinDate": "入团/入党时间",
     "isRecommendPostgrad": "是否保研", "hasOverseaStudy": "是否有留学经历",
     "isPoorStudent": "是否贫困生", "isColorBlind": "是否色弱",
     "hasOverseaId": "是否具有境外身份", "archiveLocation": "档案所在地",
@@ -55,9 +55,10 @@ EDUCATION = {
     "diploma": "学位", "degreeType": "学位类型", "degreeCategory": "学位类别",
     "eduMode": "教育方式", "enrollCategory": "招生类别", "isUnifiedEnroll": "是否统招",
     "gpa": "成绩绩点", "failedCount": "挂科数",
-    "classRank": "班级排名", "majorRank": "专业排名",
+    "classRank": "班级排名", "majorRank": "专业排名", "majorStudentCount": "专业人数",
     "diplomaNumber": "学历证书编号", "degreeNumber": "学位证书编号",
-    "studentNumber": "学号", "supervisor": "导师", "labName": "实验室名称",
+    "studentNumber": "学号", "supervisor": "导师姓名", "supervisorContact": "导师联系方式",
+    "labName": "实验室名称",
     "isKeyLab": "是否国家重点实验室", "isJointProgram": "是否联合培养",
     "counselorName": "辅导员姓名", "counselorPhone": "辅导员联系方式",
     "isOverseaSchool": "是否海外学校", "eduDescription": "教育描述",
@@ -112,7 +113,7 @@ CERTIFICATE = {
 AWARDS = {
     "name": "奖项名称", "issuer": "颁发机构", "date": "获奖时间", "endDate": "结束时间",
     "level": "奖项级别", "rewardType": "奖励类型", "rewardLevel": "奖励等级",
-    "description": "获奖描述", "detailDescription": "获奖详细描述",
+    "description": "获奖描述",
 }
 
 # patent（专利信息）
@@ -143,7 +144,7 @@ SKILL = {
 }
 
 # selfEvaluation（自我评价，对象）
-SELF_EVALUATION = {"content": "自我介绍（自我评价）"}
+SELF_EVALUATION = {"selfIntro": "自我介绍", "content": "自我评价"}
 
 # family（家庭情况，数组）
 FAMILY = {

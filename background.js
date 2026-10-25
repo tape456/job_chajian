@@ -15,7 +15,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     nativePlace: '山东济南', birthPlace: '山东济南', politicalStatus: '中共党员',
     maritalStatus: '未婚', height: '175', weight: '68', bloodType: 'O',
     idType: '身份证', idNumber: '370102200005200011', phone: '13800138000',
-    email: 'zhangsan@example.com', currentCity: '北京',
+    email: 'zhangsan@example.com',
     currentAddress: '北京市海淀区学院路30号', hukouType: '城镇', hukou: '山东济南',
     postalCode: '100083', wechat: 'zhangsan_wx', qq: '123456789', hobbies: '篮球、长跑、摄影',
     highestDegree: '硕士研究生', highestDiploma: '硕士', gradSchool: '中国人民大学',
@@ -25,7 +25,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     careerPlan: '立足本职踏实履职，长期在能源电力行业深耕发展',
     health: '健康', hasChronicDisease: '否', hasCriminalRecord: '否', hasMilitaryService: '否',
     isVeteran: '否', isRecommendPostgrad: '否', hasOverseaStudy: '否', isPoorStudent: '否',
-    isColorBlind: '否', hasOverseaId: '否', partyJoinDate: '2015-06-01', leagueJoinDate: '2015-06-01',
+    isColorBlind: '否', hasOverseaId: '否', leagueJoinDate: '2015-06-01',
     archiveLocation: '北京市/海淀区', techTitle: '无'
   });
   Object.assign(d.intention, {
@@ -48,8 +48,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     diploma: '硕士', major: '企业管理', department: '商学院', majorCategory: '工商管理类',
     schoolCity: '北京市/海淀区', schoolType: '普通本科', eduStatus: '在读', duration: '3',
     degreeType: '学术学位', degreeCategory: '管理学硕士', eduMode: '全日制', enrollCategory: '统招',
-    isUnifiedEnroll: '是', gpa: '3.7', failedCount: '0', classRank: '8', majorRank: '12',
-    studentNumber: '2022010203', supervisor: '王教授', labName: '企业管理实验室',
+    isUnifiedEnroll: '是', gpa: '3.7', failedCount: '0', classRank: '8', majorRank: '12', majorStudentCount: '120',
+    studentNumber: '2022010203', supervisor: '王教授', supervisorContact: 'wangprof@ruc.edu.cn', labName: '企业管理实验室',
     isKeyLab: '否', isJointProgram: '否', isOverseaSchool: '否',
     courses: '企业战略管理、组织行为学、运营管理、公司治理',
     researchDirection: '国有企业人力资源管理', thesis: '数字化转型下央企人才梯队建设研究',
@@ -97,12 +97,12 @@ chrome.runtime.onInstalled.addListener(async () => {
   (d.awards || (d.awards = [])).push({
     name: '国家励志奖学金', date: '2023-11-01', endDate: '2023-11-01',
     level: '国家级', rewardType: '个人', rewardLevel: '特等奖', issuer: '教育部',
-    description: '国家励志奖学金', detailDescription: '教育部颁发的国家励志奖学金'
+    description: '教育部颁发的国家励志奖学金'
   });
   (d.awards || (d.awards = [])).push({
     name: '校级优秀毕业生', date: '2025-06-01', endDate: '2025-06-01',
     level: '校级', rewardType: '个人', rewardLevel: '优秀奖', issuer: '中国人民大学',
-    description: '校级优秀毕业生', detailDescription: '中国人民大学校级优秀毕业生'
+    description: '中国人民大学校级优秀毕业生'
   });
   (d.patent || (d.patent = [])).push({ name: '一种人力资源数据可视化分析装置', type: '实用新型', number: 'CN202420123456.7', date: '2024-05-01', status: '已受理', inventor: '张三' });
   (d.paper || (d.paper = [])).push({ title: '数字化转型背景下国有企业人力资源管理创新研究', journal: '现代管理科学', authors: '张三，李四', date: '2024-03-01', level: '其他', authorship: '第一作者', volume: '2024年第3期' });
@@ -115,6 +115,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     softSkill: '沟通协调、活动策划、团队协作',
     other: '公文写作、活动策划、驾驶证C1'
   });
+  d.selfEvaluation.selfIntro = '面试官您好，我是张三，中国人民大学企业管理专业2025届硕士毕业生，中共党员。研究生期间在国家电网、中国华能完成人力资源方向的两段实习，熟悉央企人事流程与公文写作，希望应聘贵司综合管理类岗位。';
   d.selfEvaluation.content = '中共党员，硕士研究生学历，具备央企人力资源实习经验。工作严谨细致，责任心与执行力强，熟练掌握公文写作与办公软件，具有良好的沟通协调能力和团队协作精神，志愿投身能源电力行业，服从组织安排。';
   d.family.push({ relation: '父亲', name: '张建国', gender: '男', age: '52', education: '大专', politicalStatus: '中共党员', company: '济南市某机械厂', position: '车间主任', phone: '13900000001', address: '山东省/济南市' });
   d.family.push({ relation: '母亲', name: '李秀英', gender: '女', age: '50', education: '本科', politicalStatus: '群众', company: '济南市某小学', position: '教师', phone: '13900000002', address: '山东省/济南市' });

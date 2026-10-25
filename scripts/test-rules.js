@@ -348,7 +348,7 @@ const alignLabelHits = [
   ['获奖结束时间', 'awardEndDate'],
   ['获奖时间-结束时间', 'awardPeriod'],
   ['获奖起止时间', 'awardPeriod'],
-  ['获奖详细描述', 'awardDetail'],
+  ['获奖详细描述', 'awardDescription'],
   ['奖项级别', 'awardLevel'],
   ['奖励类型', 'rewardType'],
   ['奖励等级', 'rewardLevel']
@@ -362,27 +362,26 @@ console.log('\n[ 竞品对齐：获奖 schema / period flatten ]');
 const awardSec = RS.SCHEMA.sections.find(s => s.key === 'awards');
 check('板块标题为获奖经历（奖学金）', awardSec && awardSec.title === '获奖经历（奖学金）');
 const awardKeys = awardSec.fields.map(f => f.key);
-check('获奖含 detailDescription', awardKeys.includes('detailDescription'));
+check('获奖不含 detailDescription（并入获奖描述）', !awardKeys.includes('detailDescription'));
 check('奖项名称 hint 对齐竞品奖学金说明',
   awardSec.fields.find(f => f.key === 'name')?.hint?.includes('请直接填写奖学金的名字'));
 const descF = awardSec.fields.find(f => f.key === 'description');
-const detailF = awardSec.fields.find(f => f.key === 'detailDescription');
-check('获奖描述 hint 为获奖描述', descF && descF.hint === '获奖描述');
-check('获奖详细描述字段标签正确', detailF && detailF.label === '获奖详细描述');
+check('获奖描述 hint 提示详细描述也取此字段',
+  descF && descF.hint === '获奖描述；「获奖详细描述」类表单项也由此字段取值');
 const awardDemo = RS.emptyData();
 awardDemo.awards.push({
   name: '华为杯数模', issuer: '中国学位与研究生教育学会',
   date: '2025-09-01', endDate: '2025-09-01',
   level: '国家级', rewardType: '团体', rewardLevel: '三等奖',
-  description: '简要描述', detailDescription: '详细描述'
+  description: '详细描述'
 });
 const awardEntries = RS.buildFlatEntries(RS.normalizeData(awardDemo));
 const awardPeriodHit = awardEntries.find(e => e.path === 'awards.*.period');
 check('awards.*.period 由 date+endDate 生成',
   !!awardPeriodHit && /2025-09-01/.test(awardPeriodHit.value),
   awardPeriodHit && awardPeriodHit.value);
-const detailHit = FR.resolveValue(['awards.*.detailDescription'], awardEntries);
-check('resolveValue detailDescription', detailHit && /详细描述/.test(detailHit.value), detailHit && detailHit.value);
+const detailHit = FR.resolveValue(['awards.*.description'], awardEntries);
+check('resolveValue 获奖描述', detailHit && /详细描述/.test(detailHit.value), detailHit && detailHit.value);
 const endHit = FR.resolveValue(['awards.*.endDate'], awardEntries);
 check('resolveValue endDate', endHit && endHit.value === '2025-09-01', endHit && endHit.value);
 const familyAge = RS.ageFromBirthDate('1976-06-18');

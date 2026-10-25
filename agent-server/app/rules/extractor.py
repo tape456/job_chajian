@@ -251,7 +251,7 @@ def rule_extract(doc: NormalizedDocument) -> dict:
             "name": re.sub(r"[（(].{0,8}[)）]", "", clean),
             "issuer": "", "date": dt, "endDate": "",
             "level": lv_m.group(1) if lv_m else "",
-            "rewardType": "", "rewardLevel": "", "description": "", "detailDescription": "",
+            "rewardType": "", "rewardLevel": "", "description": "",
         })
     for line in section_lines.get("patent", []):
         clean, dt = _simple_row(line)
