@@ -19,45 +19,61 @@
       --qf-sp-panel:0 18px 44px rgba(11,27,51,.16), 0 2px 6px rgba(11,27,51,.06);
       --qf-sp-ball:0 10px 26px rgba(21,101,255,.42);
       --qf-warn:#D97706; --qf-bad:#DC2626;
+      --qf-ease: cubic-bezier(.22,.61,.36,1);
+      --qf-ease-spring: cubic-bezier(.34,1.56,.64,1);
+      --qf-dur: 200ms;
     }`;
   const BASE = `
     * { box-sizing: border-box; font-family: "PingFang SC", "SF Pro Text", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif; }
     button, select, input, textarea { font: inherit; }
     button { cursor: pointer; border: none; background: none; color: inherit; }
+    button:focus-visible, .qf-chip:focus-visible, .qf-select:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--qf-brand-2); outline-offset: 2px; }
     .qf-hidden { display: none !important; }`;
   const BALL = `
     .qf-ball { position: fixed; right: 22px; bottom: 78px; z-index: 2147483000;
       width: 54px; height: 54px; border-radius: var(--qf-r-pill); display: grid; place-items: center;
       color: #fff; background: var(--qf-brand-grad); box-shadow: var(--qf-sp-ball);
       border: 2px solid rgba(255,255,255,.72);
-      user-select: none; touch-action: none; cursor: grab; animation: qf-breathe 3.2s ease-in-out infinite; }
-    .qf-ball:hover { transform: scale(1.06); }
-    .qf-ball:active { cursor: grabbing; animation-play-state: paused; }
-    .qf-ball .icon { font-size: 24px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.28)); }
-    @keyframes qf-breathe {
-      0%,100% { box-shadow: 0 10px 26px rgba(21,101,255,.34); }
-      50%     { box-shadow: 0 12px 32px rgba(21,101,255,.60); }
-    }
-    @media (prefers-reduced-motion: reduce) { .qf-ball { animation: none; } }
+      user-select: none; touch-action: none; cursor: grab;
+      transition: transform .18s var(--qf-ease), box-shadow .25s;
+      animation: qf-pop-in .5s var(--qf-ease-spring); }
+    .qf-ball::before { content: ''; position: absolute; inset: -9px; border-radius: inherit; pointer-events: none;
+      background: radial-gradient(circle, transparent 74%, rgba(21,101,255,.42) 80%, rgba(21,101,255,0) 96%);
+      animation: qf-halo 3.4s ease-in-out infinite; }
+    .qf-ball:hover { transform: scale(1.07); box-shadow: 0 12px 30px rgba(21,101,255,.5); }
+    .qf-ball:not(.dragging):active { transform: scale(.92); cursor: grabbing; }
+    .qf-ball.dragging { transition: none; cursor: grabbing; }
+    .qf-ball.dragging::before { animation-play-state: paused; }
+    .qf-ball .icon { font-size: 24px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.28)); pointer-events: none; }
+    @keyframes qf-pop-in { from { opacity: 0; transform: scale(.3); } 70% { opacity: 1; transform: scale(1.08); } to { transform: scale(1); } }
+    @keyframes qf-halo { 0%,100% { opacity: .35; transform: scale(1); } 50% { opacity: .9; transform: scale(1.07); } }
     .qf-mini { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 2147483000;
       width: 28px; height: 54px; border-radius: var(--qf-r-pill) 0 0 var(--qf-r-pill); background: var(--qf-brand-grad); color: #fff;
       display: grid; place-items: center; font-size: 15px; cursor: pointer; opacity: .92;
-      box-shadow: -2px 0 12px rgba(21,101,255,.35); transition: width .15s, opacity .15s; }
-    .qf-mini:hover { width: 34px; opacity: 1; }`;
+      box-shadow: -2px 0 12px rgba(21,101,255,.35); transition: width .18s var(--qf-ease), opacity .18s, transform .12s; }
+    .qf-mini:hover { width: 34px; opacity: 1; }
+    .qf-mini:active { transform: translateY(-50%) scale(.93); }`;
   const PANEL = `
     .qf-panel { position: fixed; z-index: 2147483001; right: 20px; bottom: 145px;
       width: 320px; max-width: calc(100vw - 16px); max-height: min(85vh, 660px);
       display: flex; flex-direction: column; color: var(--qf-t1); border-radius: var(--qf-r-lg);
       background: #fff; box-shadow: var(--qf-sp-panel); border: 1px solid var(--qf-border);
-      overflow: hidden; font-size: 12px; }
+      overflow: hidden; font-size: 12px;
+      transform-origin: 100% 90%; animation: qf-panel-in .24s var(--qf-ease) both; }
+    .qf-panel.qf-out { animation: qf-panel-out .18s ease-in both; pointer-events: none; }
+    @keyframes qf-panel-in { from { opacity: 0; transform: translateY(12px) scale(.96); } }
+    @keyframes qf-panel-out { to { opacity: 0; transform: translateY(10px) scale(.96); } }
     .qf-head { padding: 11px 13px; color: #fff; background: var(--qf-brand-grad);
       display: flex; align-items: center; gap: 9px; }
     .qf-head .symbol { width: 26px; height: 26px; border-radius: 9px; background: rgba(255,255,255,.22);
       display: grid; place-items: center; font-size: 14px; font-weight: 800; }
     .qf-head .t { flex: 1; font-size: 13.5px; font-weight: 700; line-height: 1.25; letter-spacing: .2px; }
     .qf-head .t small { display: block; font-size: 10px; font-weight: 400; color: #e8f0ff; letter-spacing: .3px; }
-    .qf-head button { width: 24px; height: 24px; border-radius: var(--qf-r-pill); background: rgba(255,255,255,.18); color: #fff; font-size: 14px; }
+    .qf-head button { width: 24px; height: 24px; border-radius: var(--qf-r-pill); background: rgba(255,255,255,.18); color: #fff; font-size: 14px;
+      transition: background .15s, transform .12s var(--qf-ease); }
     .qf-head button:hover { background: rgba(255,255,255,.34); }
+    .qf-head button:active { transform: scale(.86); }
     .qf-hero { padding: 12px 13px 10px; background:
       radial-gradient(120% 90% at 0% 0%, rgba(21,101,255,.10), rgba(255,255,255,0) 62%), #fff;
       border-bottom: 1px solid var(--qf-border); }
@@ -71,11 +87,15 @@
     .qf-main-actions { display: grid; gap: 8px; }
     .qf-btn { border: 1px solid var(--qf-border-2); color: #2f4c78; background: #fff;
       padding: 9px 12px; border-radius: var(--qf-r-pill); font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 6px; transition: background .15s, box-shadow .15s; }
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background .15s, box-shadow .2s, transform .12s var(--qf-ease); }
     .qf-btn:hover { background: var(--qf-bg-soft); }
+    .qf-btn:active { transform: scale(.96); }
     .qf-btn.primary { color: #fff; background: var(--qf-brand-grad); border-color: transparent;
       box-shadow: 0 8px 20px rgba(21,101,255,.26); }
-    .qf-btn.primary:hover { background: linear-gradient(135deg, var(--qf-brand-deep), var(--qf-brand)); }
+    .qf-btn.primary:hover { background: linear-gradient(135deg, var(--qf-brand-deep), var(--qf-brand));
+      transform: translateY(-1px); box-shadow: 0 10px 24px rgba(21,101,255,.32); }
+    .qf-btn.primary:active { transform: translateY(0) scale(.97); }
     .qf-btn.ghost { color: var(--qf-brand); background: #fff; border-color: var(--qf-border-2); }
     .qf-btn.ghost:hover { background: var(--qf-bg-soft); }
     .qf-btn.pale { background: var(--qf-bg-soft); border-color: var(--qf-border); color: #2b5aa5; }
@@ -83,12 +103,24 @@
     .qf-btn.danger { color: var(--qf-bad); border-color: #FBD5D0; background: #FFF5F4; box-shadow: none; }
     .qf-btn.danger:hover { background: #ffeae7; }
     .qf-btn:disabled { opacity: .55; cursor: wait; }
+    .qf-btn.is-loading { pointer-events: none; }
+    .qf-btn.is-loading::before { content: ''; width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.45); border-top-color: #fff;
+      display: inline-block; margin-right: 7px; vertical-align: -2px;
+      animation: qf-spin .7s linear infinite; }
+    @keyframes qf-spin { to { transform: rotate(360deg); } }
     .qf-main-actions .qf-btn { width: 100%; font-size: 13px; padding: 11px; }
     .qf-main-actions .qf-btn .sub { display: block; font-size: 10px; font-weight: 400; opacity: .82; }
     .qf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
     .qf-grid .qf-btn { font-size: 11.5px; padding: 8px 6px; }
-    .qf-more-toggle { text-align: center; color: var(--qf-t2); font-size: 11px; padding: 3px; }
+    .qf-more-toggle { text-align: center; color: var(--qf-t2); font-size: 11px; padding: 3px;
+      transition: color .15s; }
     .qf-more-toggle:hover { color: var(--qf-primary); }
+    .qf-more-toggle .arr { display: inline-block; transition: transform .22s var(--qf-ease); }
+    .qf-more-toggle.open .arr { transform: rotate(180deg); }
+    .qf-more { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .26s var(--qf-ease); }
+    .qf-more.qf-collapsed { grid-template-rows: 0fr; }
+    .qf-more-inner { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 9px; }
     .qf-row { display: flex; align-items: center; gap: 7px; }
     .qf-row label { white-space: nowrap; color: var(--qf-t2); }
     .qf-select { flex: 1; min-width: 0; padding: 6px 9px; border: 1px solid var(--qf-border-2); border-radius: var(--qf-r-pill); background: #fff; color: #263a5b; }
@@ -98,11 +130,14 @@
     .qf-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
     .qf-stat { text-align: center; background: #fff; border: 1px solid var(--qf-border); border-radius: var(--qf-r-md); padding: 6px 4px; }
     .qf-stat b { display: block; color: var(--qf-brand); font-size: 16px; line-height: 1.2; }
+    .qf-stat b.pulse { animation: qf-num .32s var(--qf-ease-spring); }
     .qf-stat span { color: var(--qf-t3); font-size: 10px; }
     .qf-stat.miss b { color: var(--qf-bad); } .qf-stat.unk b { color: var(--qf-warn); }
+    @keyframes qf-num { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
     .qf-list { max-height: 132px; overflow-y: auto; background: #fff; border: 1px solid var(--qf-border);
       border-radius: var(--qf-r-md); padding: 4px; }
-    .qf-list .li { padding: 4px 6px; display: flex; gap: 5px; align-items: center; cursor: pointer; border-radius: 6px; }
+    .qf-list .li { padding: 4px 6px; display: flex; gap: 5px; align-items: center; cursor: pointer; border-radius: 6px;
+      transition: background .12s; }
     .qf-list .li:hover { background: var(--qf-bg-soft); }
     .qf-list .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--qf-warn); }
     .qf-list .dot.ok { background: var(--qf-ok); } .qf-list .dot.miss { background: var(--qf-bad); }
@@ -111,18 +146,21 @@
     .qf-list .more, .qf-empty { text-align: center; color: #8995a7; padding: 6px; font-size: 11px; }
     .qf-ai-tag { font-size: 10px; color: #6545d4; }
     .qf-tool-card { display: flex; align-items: center; gap: 8px; border: 1px solid var(--qf-border-2);
-      border-radius: var(--qf-r-pill); padding: 9px 12px; background: #fff; cursor: pointer; text-align: left; width: 100%; }
+      border-radius: var(--qf-r-pill); padding: 9px 12px; background: #fff; cursor: pointer; text-align: left; width: 100%;
+      transition: background .15s, border-color .15s, transform .12s var(--qf-ease); }
     .qf-tool-card:hover { background: var(--qf-bg-soft); }
+    .qf-tool-card:active { transform: scale(.98); }
     .qf-tool-card .tc-title { font-weight: 700; color: var(--qf-t1); }
     .qf-tool-card .tc-sub { flex: 1; color: var(--qf-t3); font-size: 11px; }
-    .qf-tool-card .tc-arrow { color: var(--qf-t3); font-size: 16px; }
+    .qf-tool-card .tc-arrow { color: var(--qf-t3); font-size: 16px; transition: transform .18s var(--qf-ease); }
+    .qf-tool-card:hover .tc-arrow { transform: translateX(3px); color: var(--qf-primary); }
     .qf-foot { border-top: 1px solid var(--qf-border); padding: 8px 12px; text-align: center; background: #fff; }
     .qf-foot a { color: var(--qf-t3); cursor: pointer; text-decoration: none; font-size: 11px; }
     .qf-foot a:hover { color: var(--qf-primary); }`;
   const SELECT = `
     /* 层级低于悬浮球：框选期间仍能点球中止（以前 2147483400 盖住球，只能靠 Esc） */
     .qf-select-mask { position: fixed; inset: 0; z-index: 2147482900; cursor: crosshair;
-      background: rgba(9,26,58,.07); touch-action: none; }
+      background: rgba(9,26,58,.07); touch-action: none; animation: qf-fade .15s ease-out both; }
     .qf-select-tip { position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
       max-width: calc(100vw - 24px); padding: 9px 18px; border-radius: 999px; color: #fff; font-size: 12.5px;
       background: linear-gradient(135deg, #1565FF, #4A8DFF); box-shadow: 0 8px 24px rgba(21,101,255,.36);
@@ -130,10 +168,14 @@
     .qf-selection { position: fixed; border: 2px dashed #1565FF; border-radius: 8px;
       background: rgba(21,101,255,.10); box-shadow: 0 0 0 9999px rgba(9,26,58,.06); pointer-events: none; }`;
   const DIALOG = `
-    .qf-shade { position: fixed; inset: 0; z-index: 2147483500; display: grid; place-items: center; background: #0c204d70; }
+    .qf-shade { position: fixed; inset: 0; z-index: 2147483500; display: grid; place-items: center; background: #0c204d70;
+      animation: qf-fade .18s ease-out both; }
     .qf-dialog { width: min(420px, calc(100vw - 32px)); max-height: min(86vh, 760px); overflow: auto;
       background: #fff; color: var(--qf-t1); padding: 18px; box-shadow: 0 20px 55px #10295655;
-      border-radius: var(--qf-r-lg); font-size: 13px; }
+      border-radius: var(--qf-r-lg); font-size: 13px;
+      animation: qf-rise .26s var(--qf-ease) both; }
+    @keyframes qf-fade { from { opacity: 0; } }
+    @keyframes qf-rise { from { opacity: 0; transform: translateY(14px) scale(.98); } }
     .qf-dialog h3 { margin: 0 0 4px; text-align: center; font-size: 16px; }
     .qf-dialog .qf-sub { text-align: center; color: var(--qf-t3); font-size: 11.5px; margin: 0 0 12px; }
     .qf-dialog p { line-height: 1.6; margin: 7px 0; color: var(--qf-t2); }
@@ -175,8 +217,12 @@
     .qf-dialog.is-busy .qf-progress-symbol { animation: qf-pulse 1.6s ease-in-out infinite; }
     @keyframes qf-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
     .qf-progress-track { height: 8px; border-radius: var(--qf-r-pill); background: #EAF0FA; overflow: hidden; margin: 16px 0 10px; }
-    .qf-progress-fill { height: 100%; width: 4%; border-radius: var(--qf-r-pill);
+    .qf-progress-fill { height: 100%; width: 4%; border-radius: var(--qf-r-pill); position: relative; overflow: hidden;
       background: var(--qf-ok-grad); transition: width .3s ease; }
+    .qf-dialog.is-busy .qf-progress-fill::after { content: ''; position: absolute; inset: 0;
+      background: linear-gradient(100deg, transparent 32%, rgba(255,255,255,.55) 50%, transparent 68%);
+      transform: translateX(-100%); animation: qf-shimmer 1.2s ease-in-out infinite; }
+    @keyframes qf-shimmer { to { transform: translateX(100%); } }
     .qf-steps { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--qf-t3); }
     .qf-steps span { flex: 1; text-align: center; padding: 5px 2px; border-radius: var(--qf-r-pill);
       background: #F3F7FE; border: 1px solid var(--qf-border); transition: all .2s; }
@@ -191,7 +237,8 @@
     .qf-helper { position: fixed; z-index: 2147483200; top: 12vh; left: 16px;
       width: min(340px, calc(100vw - 25px)); max-height: 72vh; display: flex; flex-direction: column;
       background: #fff; color: var(--qf-t1); border: 1px solid #cbdaf5; border-radius: var(--qf-r-lg);
-      box-shadow: 0 12px 32px #173f8644; font-size: 12px; overflow: hidden; }
+      box-shadow: 0 12px 32px #173f8644; font-size: 12px; overflow: hidden;
+      animation: qf-rise .26s var(--qf-ease) both; }
     .qf-helper-head { display: flex; align-items: center; gap: 8px; padding: 10px 11px;
       background: var(--qf-brand-grad); color: #fff; font-weight: 700; }
     .qf-helper-head .cnt { font-size: 11px; font-weight: 400; color: #e9f3ff; }
@@ -206,9 +253,13 @@
     .qf-helper-content h4 { margin: 10px 0 4px; color: #59718d; font-size: 11px; display: flex; gap: 6px; }
     .qf-helper-content h4 .n { color: var(--qf-t3); font-weight: 400; }
     .qf-chip { display: inline-block; margin: 3px 3px 0 0; background: #f5f9ff; border: 1px solid #cddcf4;
-      color: #285485; border-radius: 5px; padding: 5px 7px; font-size: 11px; max-width: 100%; }
+      color: #285485; border-radius: 5px; padding: 5px 7px; font-size: 11px; max-width: 100%;
+      transition: background .14s, border-color .14s, transform .12s var(--qf-ease); }
     .qf-chip:hover { background: #e8f1ff; }
-    .qf-chip.selected { background: var(--qf-primary); border-color: var(--qf-primary); color: #fff; }
+    .qf-chip:active { transform: scale(.95); }
+    .qf-chip.selected { background: var(--qf-primary); border-color: var(--qf-primary); color: #fff;
+      animation: qf-chip-pick .25s var(--qf-ease-spring); }
+    @keyframes qf-chip-pick { 45% { transform: scale(1.07); } }
     .qf-helper-foot { border-top: 1px solid #e7edf7; padding: 8px 10px; text-align: right; background: #f9fbff; }
     .qf-helper-foot button { color: var(--qf-t2); font-size: 11px; }
     .qf-helper-foot button:hover { color: var(--qf-bad); }`;
@@ -226,17 +277,24 @@
   const TOAST = `
     .qf-toast { position: fixed; z-index: 2147483646; right: 18px; bottom: 22px; max-width: 360px;
       border-radius: 9px; color: #fff; background: #264379; box-shadow: 0 6px 25px #152f4d66;
-      padding: 10px 14px; line-height: 1.5; font-size: 12px; overflow-wrap: anywhere; }
+      padding: 10px 14px; line-height: 1.5; font-size: 12px; overflow-wrap: anywhere;
+      animation: qf-toast-in .28s var(--qf-ease-spring) both; }
+    .qf-toast.qf-out { animation: qf-toast-out .18s ease-in both; }
     .qf-toast-ok { background: #14603a; }
     .qf-toast-warn { background: #7d4f06; }
-    .qf-toast-danger { background: #8c1d18; }`;
+    .qf-toast-danger { background: #8c1d18; }
+    @keyframes qf-toast-in { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+    @keyframes qf-toast-out { to { opacity: 0; transform: translateY(10px); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }`;
   const STYLE = [TOKENS, BASE, BALL, PANEL, SELECT, DIALOG, PROGRESS, HELPER, JOBS, TOAST].join('\n');
 
   const POS_KEY = 'qfBallPosition';
   const HELPER_TIP = '第一步：点击字段按钮；第二步：在网页中点击要填写的输入框。';
 
   let host, shadow, ui = {}, handlers = {};
-  let dragState, selectMask, selectionCallback, toastTimer, savePosTimer, watchdogTimer, removalObserver, miniEl;
+  let dragState, selectMask, selectionCallback, toastTimer, toastOutTimer, panelAnimTimer, savePosTimer, watchdogTimer, removalObserver, miniEl;
   let helperWait = null;
 
   function node(tag, cls, text) {
@@ -364,7 +422,10 @@
     ball.addEventListener('pointermove', e => {
       if (!dragState || dragState.id !== e.pointerId) return;
       const dx = e.clientX - dragState.x, dy = e.clientY - dragState.y;
-      if (Math.abs(dx) + Math.abs(dy) > 6) dragState.moved = true;
+      if (Math.abs(dx) + Math.abs(dy) > 6) {
+        if (!dragState.moved) ball.classList.add('dragging');
+        dragState.moved = true;
+      }
       if (!dragState.moved) return;
       const left = clampX(dragState.rect.left + dx, dragState.rect.width);
       const top = clampY(dragState.rect.top + dy, dragState.rect.height);
@@ -374,6 +435,7 @@
     const end = () => {
       if (dragState && dragState.moved) {
         lastDragEnd = Date.now();
+        ball.classList.remove('dragging');
         saveBallPos(parseFloat(ui.ball.style.left), parseFloat(ui.ball.style.top));
       }
       dragState = null;
@@ -383,7 +445,8 @@
     ball.addEventListener('lostpointercapture', end);
     ball.addEventListener('click', () => {
       if (Date.now() - lastDragEnd < 300) return;
-      const show = ui.panel.classList.contains('qf-hidden');
+      // 退场动画进行中（qf-out）也视为"已关"，这次点击应当重新打开而不是维持关闭
+      const show = ui.panel.classList.contains('qf-hidden') || ui.panel.classList.contains('qf-out');
       togglePanel(show);
       if (show) handlers.onOpen?.();
     });
@@ -432,15 +495,15 @@
           <button class="qf-btn pale" data-act="manage">✎ 编辑简历</button>
           <button class="qf-btn pale" data-act="switch">⇄ 切换简历</button>
         </div>
-        <button class="qf-more-toggle" data-act="toggleMore">识别统计与简历 ▾</button>
-        <div class="qf-more qf-hidden" data-role="more">
+        <button class="qf-more-toggle" data-act="toggleMore">识别统计与简历 <span class="arr">▾</span></button>
+        <div class="qf-more qf-collapsed" data-role="more"><div class="qf-more-inner">
           <div class="qf-row"><label>使用简历</label><select class="qf-select" data-role="resume"></select></div>
           <p class="qf-note" data-role="resumeNote">请先编辑并保存简历，填写越完整，匹配越准确。</p>
           <div class="qf-stats"><div class="qf-stat ok"><b data-role="nMatched">0</b><span>可填写</span></div>
             <div class="qf-stat miss"><b data-role="nMissing">0</b><span>简历缺失</span></div>
             <div class="qf-stat unk"><b data-role="nUnmatched">0</b><span>未识别</span></div></div>
           <div class="qf-list" data-role="list"></div>
-        </div>
+        </div></div>
         <button class="qf-tool-card" data-act="tools"><span class="tc-title">求职神器</span>
           <span class="tc-sub">面试 · 笔试实用工具</span><span class="tc-arrow">›</span></button>
       </div>
@@ -454,6 +517,10 @@
     ui.nMatched = panel.querySelector('[data-role=nMatched]');
     ui.nMissing = panel.querySelector('[data-role=nMissing]');
     ui.nUnmatched = panel.querySelector('[data-role=nUnmatched]');
+    // 展开动画改变面板高度，结束后把面板重新贴回球边，避免盖住球
+    ui.more.addEventListener('transitionend', e => {
+      if (e.propertyName === 'grid-template-rows') positionPanelNearBall();
+    });
     panel.addEventListener('click', e => {
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act) ACTIONS[act]?.();
@@ -463,15 +530,25 @@
 
   function togglePanel(show) {
     if (!ui.panel) return;
-    ui.panel.classList.toggle('qf-hidden', !show);
-    if (show) positionPanelNearBall();
+    clearTimeout(panelAnimTimer);
+    if (show) {
+      ui.panel.classList.remove('qf-out', 'qf-hidden');
+      positionPanelNearBall();
+    } else {
+      if (ui.panel.classList.contains('qf-hidden')) return;
+      ui.panel.classList.add('qf-out');
+      panelAnimTimer = setTimeout(() => {
+        ui.panel.classList.add('qf-hidden');
+        ui.panel.classList.remove('qf-out');
+      }, 190);
+    }
   }
   function toggleMore(force) {
     if (!ui.more) return;
-    const willShow = force === true ? true : force === false ? false : ui.more.classList.contains('qf-hidden');
-    ui.more.classList.toggle('qf-hidden', !willShow);
+    const willShow = force === true ? true : force === false ? false : ui.more.classList.contains('qf-collapsed');
+    ui.more.classList.toggle('qf-collapsed', !willShow);
     const btn = ui.panel?.querySelector('[data-act=toggleMore]');
-    if (btn) btn.textContent = willShow ? '识别统计与简历 ▴' : '识别统计与简历 ▾';
+    if (btn) btn.classList.toggle('open', willShow);
     if (willShow) positionPanelNearBall();
   }
   function positionPanelNearBall() {
@@ -489,10 +566,15 @@
   function toast(message, kind) {
     if (!ui.toast) return;
     const k = TOAST_MS[kind] ? kind : 'info';
-    ui.toast.textContent = message;
-    ui.toast.className = 'qf-toast qf-toast-' + k;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => ui.toast.classList.add('qf-hidden'), TOAST_MS[k]);
+    clearTimeout(toastOutTimer);
+    ui.toast.textContent = message;
+    // 重写 className：摘掉 qf-hidden/qf-out 的瞬间 display 变化会重播入场动画
+    ui.toast.className = 'qf-toast qf-toast-' + k;
+    toastTimer = setTimeout(() => {
+      ui.toast.classList.add('qf-out');
+      toastOutTimer = setTimeout(() => ui.toast.classList.add('qf-hidden'), 190);
+    }, TOAST_MS[k]);
   }
 
   // ---------------- 进度窗口 ----------------
@@ -947,9 +1029,19 @@
     setResumeHint(hint) { if (ui.resumeSelect) ui.resumeSelect.title = hint || ''; },
     setStats(stats) {
       if (!ui.nMatched) return;
-      ui.nMatched.textContent = stats.matched || 0;
-      ui.nMissing.textContent = stats.missing || 0;
-      ui.nUnmatched.textContent = stats.unmatched || 0;
+      // 数字变化时弹一下：让「重新识别后统计变了」有可感知的反馈
+      const setNum = (el, v) => {
+        const s = String(v);
+        if (el.textContent === s) return;
+        el.textContent = s;
+        if (s === '0') return;
+        el.classList.remove('pulse');
+        void el.offsetWidth;
+        el.classList.add('pulse');
+      };
+      setNum(ui.nMatched, stats.matched || 0);
+      setNum(ui.nMissing, stats.missing || 0);
+      setNum(ui.nUnmatched, stats.unmatched || 0);
       ui.list.replaceChildren();
       const rows = stats.rows || [];
       for (const row of rows.slice(0, 60)) {
@@ -966,7 +1058,7 @@
     },
     setBusy(busy) {
       const btn = ui.panel && ui.panel.querySelector('[data-act=fill]');
-      if (btn) { btn.disabled = !!busy; btn.textContent = busy ? '填写中…' : '⚡︎ 一键填写'; }
+      if (btn) { btn.disabled = !!busy; btn.classList.toggle('is-loading', !!busy); btn.textContent = busy ? '填写中…' : '⚡︎ 一键填写'; }
     },
     isPanelOpen() { return !!ui.panel && !ui.panel.classList.contains('qf-hidden'); }
   };
