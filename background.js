@@ -356,6 +356,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, action });
           break;
         }
+        case 'ai:pickOption': {
+          sendResponse(await aiPickOption(msg));
+          break;
+        }
         case 'resume:changed': {
           await broadcastToTabs({ type: 'resume:updated' });
           sendResponse({ ok: true });
@@ -505,21 +509,35 @@ async function aiChat(payload) {
   return content;
 }
 
+// 自学习缓存：必须按「单个信号」逐条写入。matchFields 查询用的是每个信号各自的
+// 归一键；以前存的是拼接信号（"姓名 | name"）的键，两边对不上，学到的映射永远不命中。
+async function learnMappings(fields, mapping, validPaths) {
+  for (const f of fields || []) {
+    const p = mapping && mapping[f.id];
+    if (typeof p !== 'string' || !validPaths.has(p)) continue;
+    const sigs = Array.isArray(f.signals) ? f.signals.slice(0, 2) : (f.signal ? [f.signal] : []);
+    for (const sig of sigs) {
+      const n = FieldRules.normalize(sig);
+      if (n && n.length >= 2) await S.saveLearnedRule(n, p).catch(() => {});
+    }
+  }
+}
+
 async function aiMatchFields(fields, entries, probe) {
   const settings = await S.getSettings();
   if ((!settings.aiEnabled && !probe) || !settings.aiApiKey || !fields || !fields.length) return {};
-  const learned = await S.getLearnedRules();
 
   const entryList = entries.map(e => ({ path: e.path, label: e.label }));
   const prompt = [
     '你是招聘表单字段映射助手。给定一组网页表单字段的描述信号，以及一份简历数据的字段路径列表，',
     '请为每个表单字段选择最合适的简历路径。若无法确定或简历中没有对应数据，输出 null。',
+    '带 options 的字段是下拉/单选控件：所选 path 的值应能对应其中某个选项，对应不上就输出 null。',
     '严格输出 JSON 对象，键为字段 id，值为简历 path 或 null，不要输出其他内容。',
     '',
     '简历字段路径列表：',
     JSON.stringify(entryList),
     '',
-    '表单字段（id + 信号文本，如 label/placeholder/name）：',
+    '表单字段（id + 信号文本，如 label/placeholder/name；下拉/单选附选项摘要）：',
     JSON.stringify(fields),
     '',
     '输出 JSON：'
@@ -536,11 +554,9 @@ async function aiMatchFields(fields, entries, probe) {
   const result = {};
   for (const f of fields) {
     const p = mapping[f.id];
-    if (typeof p === 'string' && validPaths.has(p)) {
-      result[f.id] = p;
-      if (f.signal) await S.saveLearnedRule(FieldRules.normalize(f.signal), p).catch(() => {});
-    }
+    if (typeof p === 'string' && validPaths.has(p)) result[f.id] = p;
   }
+  await learnMappings(fields, result, validPaths);
   return result;
 }
 
@@ -589,15 +605,19 @@ async function aiPageUnderstand(payload) {
   if (!settings.aiApiKey) return {};
   if (settings.parserBaseUrl) {
     try {
-      return await callParserPage(settings, payload);
+      const result = await callParserPage(settings, payload);
+      // 解析服务链路同样要写自学习缓存：否则只有直连模型的链路在学习
+      await learnMappings(payload.fields, result, new Set(payload.entries.map(e => e.path)));
+      return result;
     } catch (e) {
       console.warn('[速填] 解析服务页面理解失败，回退本地映射：', e.message);
     }
   }
-  // 回退：复用旧的一次性映射链路
+  // 回退：复用旧的一次性映射链路（带选项摘要，帮模型避开对应不上选项的 path）
   const flatFields = payload.fields.map(f => ({
     id: f.id,
-    signal: (f.signals || []).slice(0, 3).join(' | ')
+    signal: (f.signals || []).slice(0, 3).join(' | '),
+    options: (f.options || []).slice(0, 20).map(o => o.text || '')
   }));
   return aiMatchFields(flatFields, payload.entries, true);
 }
@@ -705,4 +725,31 @@ async function aiPageAct(obs) {
     { role: 'user', content: pageActPrompt(obs) }
   ], settings);
   return parsePageActContent(content);
+}
+
+// 选项兜底：select/radio 本地匹配失败时，让模型从选项列表里挑一个序号。
+// 各站点选项口径五花八门（「硕士」/「研究生」/「硕士研究生学历」），本地归一覆盖不全。
+async function aiPickOption(msg) {
+  const settings = await S.getSettings();
+  const opts = (msg.options || []).map(t => String(t || '').trim()).filter(Boolean).slice(0, 120);
+  if (!settings.aiEnabled || !settings.aiApiKey || !opts.length) {
+    return { ok: false, reason: 'ai_unavailable' };
+  }
+  const prompt = [
+    '你是表单选项匹配助手。给定简历里的字段值和网页下拉/单选控件的选项列表，',
+    '选出与简历值语义最匹配的选项序号（index，从 0 开始）。',
+    '允许合理等价：「硕士研究生」≈「硕士」「研究生」；「中共党员」≈「党员」；「985工程院校」≈「985」。',
+    '选项里实在没有对应项时输出 -1，不要硬凑。',
+    '只输出 JSON：{"index": 0}',
+    '',
+    '字段名：' + String(msg.label || ''),
+    '简历值：' + String(msg.value || ''),
+    '选项列表：' + JSON.stringify(opts)
+  ].join('\n');
+  const { content } = await callChat([{ role: 'user', content: prompt }], settings);
+  const m = String(content || '').match(/\{[\s\S]*\}/);
+  let i = -1;
+  try { i = Number(JSON.parse(m[0]).index); } catch (e) {}
+  if (!Number.isInteger(i) || i < -1 || i >= opts.length) i = -1;
+  return { ok: i >= 0, index: i };
 }

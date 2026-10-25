@@ -134,6 +134,25 @@
     return any ? true : 'none';
   }
 
+  // ---------- select/radio 的 AI 选项兜底 ----------
+  // 本地同义词归一覆盖不了所有站点的选项口径（「硕士」/「研究生」/「硕士研究生学历」），
+  // 匹配不上时把简历值和选项列表交给模型挑一个序号。未配 AI 时 background 直接回 unavailable。
+  async function askAiOption(options, value, label) {
+    if (!options || !options.length) return -1;
+    try {
+      const resp = await chrome.runtime.sendMessage({
+        type: 'ai:pickOption',
+        options: options.map(o => String(o.text || '').trim()).filter(Boolean).slice(0, 120),
+        value: String(value).slice(0, 150),
+        label: String(label || '').slice(0, 30)
+      });
+      const i = resp && resp.ok ? Number(resp.index) : -1;
+      return Number.isInteger(i) && i >= 0 && i < options.length ? i : -1;
+    } catch (e) {
+      return -1;
+    }
+  }
+
   // ---------- 组件驱动用到的基础工具 ----------
   // 面板发现与列分组统一走 DomAgent.observe，这里不再各写一套选择器：
   // 以前 filler 和 dom-agent 各有一份 collectOptions，同一组件两边判定不一致就会偶发漏填。
@@ -397,8 +416,35 @@
     let ok = false, reason = '', layer = 'native';
     try {
       switch (field.kind) {
-        case 'select': ok = fillSelect(field, value); break;
-        case 'radio': ok = fillRadio(field, value); break;
+        case 'select': {
+          ok = fillSelect(field, value);
+          if (ok !== true) {
+            const i = await askAiOption(field.options, value, o.label);
+            if (i >= 0 && field.options[i]) {
+              const opt = field.options[i];
+              field.el.value = opt.value != null ? opt.value : opt.el.value;
+              fire(field.el, 'change');
+              if (opt.el && opt.el.dispatchEvent) opt.el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+              ok = true; layer = 'ai';
+            } else if (ok === false) {
+              reason = 'option_not_found';
+            }
+          }
+          break;
+        }
+        case 'radio': {
+          ok = fillRadio(field, value);
+          if (ok !== true) {
+            const i = await askAiOption(field.options, value, o.label);
+            if (i >= 0 && field.options[i] && field.options[i].el) {
+              field.options[i].el.click();
+              ok = true; layer = 'ai';
+            } else {
+              reason = 'option_not_found';
+            }
+          }
+          break;
+        }
         case 'checkbox': ok = fillSingleCheckbox(field, value); break;
         case 'checkboxGroup': ok = fillCheckboxGroup(field, value); break;
         case 'contenteditable': ok = fillContenteditable(field, value); break;
@@ -511,6 +557,7 @@
     commit_no_effect: '点了确认但没生效',
     commit_failed: '确认按钮点不动',
     verified_mismatch: '填了但和简历值不一致，请核对',
+    option_not_found: '下拉/单选选项里没有与简历值匹配的项（AI 兜底也未选中）',
     hit_test_failed: '被遮挡或不在视口内',
     frame_offset_unavailable: '跨域框架里算不出真实坐标',
     debugger_denied: '未授权可信输入（点了调试横幅的「取消」）',
