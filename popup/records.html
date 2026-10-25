@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>本地记录 - 央国企网申速填</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body { width: auto; min-width: 520px; max-width: 860px; margin: 0 auto; }
+    .rec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .rec-table th, .rec-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #e9eef7; vertical-align: top; }
+    .rec-table th { color: #70829d; font-weight: 600; background: #f7faff; }
+    .rec-table td.url { color: #64748b; word-break: break-all; max-width: 260px; }
+    .rec-actions { display: flex; gap: 8px; margin: 10px 0 14px; }
+    .rec-empty { color: #8995a7; padding: 14px; text-align: center; font-size: 12px; }
+    .rec-del { color: #c0392b; cursor: pointer; }
+    h1.page-title { font-size: 15px; margin: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../icons/icon48.png" alt="">
+      <div>
+        <h1 class="page-title">本地记录</h1>
+        <p>仅保存在本机浏览器，不会上传</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-head"><h2>投递记录（<span id="jobCount">0</span>）</h2></div>
+      <div class="rec-actions">
+        <button id="exportJobs" class="btn primary sm">导出 JSON</button>
+        <button id="clearJobs" class="btn sm">清空</button>
+      </div>
+      <div id="jobsBox"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>不适配反馈（<span id="fbCount">0</span>）</h2></div>
+      <div class="rec-actions">
+        <button id="exportFb" class="btn primary sm">导出 JSON</button>
+      </div>
+      <div id="fbBox"></div>
+    </section>
+  </main>
+
+  <script src="../lib/storage.js"></script>
+  <script src="records.js"></script>
+</body>
+</html>

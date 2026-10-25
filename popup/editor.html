@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>编辑简历 - 央国企网申速填</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../icons/icon48.png" alt="">
+      <div class="brand-text">
+        <span class="brand-name">央国企网申速填</span>
+        <span class="brand-sub">FIELD INTELLIGENCE FOR JOBS</span>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <input type="text" id="resumeName" class="name-input" placeholder="当前简历名称">
+      <span id="saveState" class="save-state"></span>
+    </div>
+    <div class="topbar-actions">
+      <button id="btnParse" class="btn" title="上传 PDF / Word / TXT 简历解析并覆盖当前内容">解析导入</button>
+      <input type="file" id="fileParse" accept=".pdf,.docx,.txt,.md" hidden>
+      <button id="btnSave" class="btn primary">保存</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- 左侧：内容导航 -->
+    <aside class="content-nav">
+      <div class="nav-card">
+        <div class="nav-card-title">内容导航</div>
+        <div class="nav-stats">
+          <div class="nav-stats-row">
+            <span class="nav-stats-num" id="navFilled">0</span>
+            <span class="nav-stats-den">/ <span id="navTotal">0</span> 个字段</span>
+          </div>
+          <div class="progress-track"><div class="progress-bar" id="navProgress"></div></div>
+          <div class="nav-stats-row sub">
+            <span>完成度 <b id="navPercent">0%</b></span>
+            <span class="missing-count" id="navMissing">未补齐 0 项</span>
+          </div>
+        </div>
+        <button id="btnOnlyMissing" class="btn-missing-toggle">查看未补齐项</button>
+        <button id="btnJumpMissing" class="btn-ghost">定位到第一个未补齐项</button>
+      </div>
+      <nav id="sectionNav" class="section-nav"></nav>
+    </aside>
+
+    <!-- 右侧：表单 -->
+    <main id="formRoot" class="form-root"></main>
+  </div>
+
+  <script src="../lib/resume-schema.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/vendor/pdf.min.js"></script>
+  <script src="../lib/resume-parser.js"></script>
+  <script src="../lib/agent-client.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

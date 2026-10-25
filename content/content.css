@@ -1,0 +1,48 @@
+/* 填写结果高亮（宿主页面级样式，全部 !important 防覆盖） */
+
+.__qf_filled {
+  outline: 2px solid #16a34a !important;
+  outline-offset: 1px !important;
+  background-color: rgba(22, 163, 74, 0.05) !important;
+}
+
+.__qf_filled_other {
+  outline: 2px solid #d97706 !important;
+  outline-offset: 1px !important;
+  background-color: rgba(217, 119, 6, 0.06) !important;
+}
+
+.__qf_failed {
+  outline: 2px solid #dc2626 !important;
+  outline-offset: 1px !important;
+  background-color: rgba(220, 38, 38, 0.06) !important;
+}
+
+.__qf_missing {
+  outline: 2px dashed #dc2626 !important;
+  outline-offset: 1px !important;
+  background-color: rgba(220, 38, 38, 0.04) !important;
+}
+
+.__qf_unmatched {
+  outline: 2px dashed #d97706 !important;
+  outline-offset: 1px !important;
+}
+
+/* 选区填写：识别得到但不属于本次选中那一组的控件 —— 用灰色，避免和「缺项/未识别」的红橙混成一片 */
+.__qf_skip {
+  outline: 1px dashed #94a3b8 !important;
+  outline-offset: 1px !important;
+}
+
+/* radio/checkbox 组高亮其 label */
+label:has(> .__qf_filled),
+label:has(.__qf_filled) {
+  outline: 1px solid #16a34a !important;
+  border-radius: 3px;
+}
+label:has(> .__qf_missing),
+label:has(.__qf_missing) {
+  outline: 1px dashed #dc2626 !important;
+  border-radius: 3px;
+}

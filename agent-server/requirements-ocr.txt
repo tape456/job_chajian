@@ -1,0 +1,8 @@
+# 扫描件 / 图片简历 OCR 可选依赖（二选一即可，PaddleOCR 中文效果更好）
+# 方案一：PaddleOCR（推荐中文场景，体积较大）
+paddlepaddle>=2.6.0
+paddleocr>=2.8.0
+
+# 方案二：Tesseract（需系统安装 tesseract-ocr，含 chi_sim 语言包）
+pytesseract>=0.3.10
+pdf2image>=1.17.0

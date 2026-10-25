@@ -1,0 +1,85 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 360px;
+  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  font-size: 13px;
+  color: #1f2937;
+  background: #f5f7fa;
+}
+
+header {
+  background: linear-gradient(135deg, #3b6ef5, #6b93ff);
+  color: #fff;
+  padding: 12px 14px;
+}
+
+.logo { display: flex; gap: 10px; align-items: center; }
+.logo img { width: 36px; height: 36px; border-radius: 8px; }
+.logo h1 { font-size: 15px; font-weight: 600; }
+.logo p { font-size: 11px; opacity: .85; margin-top: 2px; }
+
+main { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.card-head h2 { font-size: 13px; font-weight: 600; }
+
+.btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #374151;
+  transition: all .15s;
+}
+.btn:hover { border-color: #3b6ef5; color: #3b6ef5; }
+.btn.primary { background: #3b6ef5; border-color: #3b6ef5; color: #fff; }
+.btn.primary:hover { background: #2f5de0; }
+.btn.sm { padding: 4px 9px; font-size: 12px; }
+.btn.danger:hover { border-color: #dc2626; color: #dc2626; }
+
+.resume-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.resume-item {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid #e8ecf2; border-radius: 8px; padding: 8px 10px;
+  cursor: pointer; transition: all .15s;
+}
+.resume-item:hover { border-color: #c6d6ff; }
+.resume-item.active { border-color: #3b6ef5; background: #eef3ff; }
+.resume-item .r-info { flex: 1; min-width: 0; }
+.resume-item .r-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume-item .r-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+.resume-item .r-badge { font-size: 10px; background: #3b6ef5; color: #fff; border-radius: 4px; padding: 1px 5px; }
+.resume-item .r-actions { display: flex; gap: 4px; }
+.resume-item .r-actions button { padding: 3px 7px; font-size: 11px; }
+
+.empty-tip { color: #9ca3af; text-align: center; padding: 10px 0; font-size: 12px; }
+.hidden { display: none !important; }
+
+.row-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+.switch-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 6px 0; font-size: 12px; cursor: pointer;
+}
+.switch-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #3b6ef5; cursor: pointer; flex-shrink: 0; }
+
+.ai-config { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #f9fafb; border-radius: 8px; margin-top: 4px; }
+.ai-config label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #4b5563; }
+.ai-config input { border: 1px solid #d1d5db; border-radius: 6px; padding: 5px 8px; font-size: 12px; }
+.ai-test-result { font-size: 11px; }
+.ai-test-result.ok { color: #16a34a; }
+.ai-test-result.fail { color: #dc2626; }
+
+.tip { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+
+.help ol { padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.help li { font-size: 12px; color: #4b5563; line-height: 1.5; }

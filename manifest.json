@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "央国企网申速填简历",
+  "version": "1.0.0",
+  "description": "自动识别招聘表单，语义匹配字段，一键填写简历信息。规则引擎 + 可选 AI 增强，填写结果高亮预览，最终确认权在你。",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage", "activeTab", "scripting", "debugger", "webNavigation"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "央国企网申速填简历",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*", "file:///*"],
+      "js": [
+        "content/overlay.js",
+        "lib/resume-schema.js",
+        "lib/rules.js",
+        "lib/storage.js",
+        "content/matcher.js",
+        "content/trusted-input.js",
+        "content/filler.js",
+        "content/dom-agent.js",
+        "content/detector.js",
+        "content/content-main.js"
+      ],
+      "css": ["content/content.css"],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup/editor.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

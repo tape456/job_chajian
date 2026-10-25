@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../icons/icon48.png" alt="">
+      <div>
+        <h1>央国企网申速填</h1>
+        <p>AI + 规则引擎，填表只留确认权给你</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 简历列表 -->
+    <section class="card">
+      <div class="card-head">
+        <h2>我的简历</h2>
+        <button id="btnAdd" class="btn primary sm">+ 新建</button>
+      </div>
+      <ul id="resumeList" class="resume-list"></ul>
+      <p id="emptyTip" class="empty-tip hidden">还没有简历，点击「新建」创建，或导入 JSON 文件</p>
+      <div class="row-actions">
+        <button id="btnParse" class="btn primary sm" title="上传 PDF / Word / TXT 简历，自动解析建档">上传简历解析</button>
+        <input type="file" id="fileParse" accept=".pdf,.docx,.txt,.md" hidden>
+        <button id="btnImport" class="btn sm">导入 JSON</button>
+        <input type="file" id="fileImport" accept=".json,application/json" hidden>
+        <button id="btnExport" class="btn sm">导出当前简历</button>
+        <button id="btnFillNow" class="btn sm" title="在当前标签页强制显示速填面板">填入当前页</button>
+      </div>
+      <p class="tip">支持多份简历：不同招聘网站可各自记忆使用哪份简历（在网页悬浮球中切换即记住）。</p>
+    </section>
+
+    <!-- 设置 -->
+    <section class="card">
+      <div class="card-head"><h2>设置</h2></div>
+      <label class="switch-row">
+        <span>自动识别招聘表单（显示悬浮球）</span>
+        <input type="checkbox" id="autoDetect">
+      </label>
+      <label class="switch-row">
+        <span>启用 AI 语义增强（未匹配字段交给大模型）</span>
+        <input type="checkbox" id="aiEnabled">
+      </label>
+      <label class="switch-row">
+        <span>AI 辅助点击（复杂下拉失败时自动，也可单独使用）</span>
+        <input type="checkbox" id="aiDomAgent" checked>
+      </label>
+      <label class="switch-row">
+        <span>可信输入（用真实鼠标/键盘事件点自绘组件）</span>
+        <input type="checkbox" id="trustedInput" checked>
+      </label>
+      <p class="tip">省市区级联、自绘下拉这类组件会忽略程序合成的点击，只认真实输入。开启后插件通过调试协议发出可信事件来点中它们，代价是页面顶部出现一条「正在调试此浏览器」横幅（点它的「取消」会退回合成事件，不影响其它填写），且同一标签页开着 F12 时不可用。</p>
+      <div id="aiConfig" class="ai-config hidden">
+        <label>API 地址 <input type="text" id="aiBaseUrl" placeholder="https://api.deepseek.com/v1" title="OpenAI 兼容地址；填到主机端口或带 /v1 均可，插件会自动补全 /v1"></label>
+        <label>API Key <input type="password" id="aiApiKey" placeholder="sk-..."></label>
+        <label>模型 <input type="text" id="aiModel" placeholder="deepseek-chat"></label>
+        <button id="btnTestAi" class="btn sm">测试连接</button>
+        <span id="aiTestResult" class="ai-test-result"></span>
+      </div>
+      <label class="switch-row">
+        <span>扫描件启用 OCR（图片/扫描 PDF 才需要）</span>
+        <input type="checkbox" id="useOcr">
+      </label>
+      <label>解析服务地址（可选，准确率更高） <input type="text" id="parserBaseUrl" placeholder="http://localhost:8000" title="自建的 LangGraph 解析服务；留空则用本地规则+AI 直连"></label>
+      <p class="tip">API Key 仅保存在本机浏览器，AI 请求由扩展后台直连你配置的服务。API 地址填到主机端口（如 http://1.2.3.4:3000）或带 /v1 均可，插件会自动补全 /v1 并兼容各类中转站。填写「解析服务地址」后，上传简历将走 LangGraph 智能体（DOCX 表格感知 + 逐板块结构化）。</p>
+    </section>
+
+    <section class="card help">
+      <div class="card-head"><h2>本地记录</h2></div>
+      <div class="row-actions">
+        <button id="btnRecords" class="btn sm">投递记录</button>
+        <button id="btnFeedback" class="btn sm">不适配反馈</button>
+      </div>
+      <p class="tip">「记录职位」与「辅助填写-反馈不适配」的数据只保存在本机浏览器，可在此查看与导出。</p>
+    </section>
+
+    <section class="card help">
+      <div class="card-head"><h2>使用方法</h2></div>
+      <ol>
+        <li>新建/导入简历并填写完整（信息越全，命中率越高）</li>
+        <li>打开任意招聘网申页面，右下角出现 <b>速填悬浮球</b>（可拖动，位置会记住）</li>
+        <li>点击悬浮球 → <b>一键填写</b>；只填某一段经历用 <b>选区填写</b>；个别填不进的字段用 <b>辅助填写</b>；复杂下拉用 <b>AI 辅助点击</b></li>
+        <li>绿色=已填写，红色=缺失/未识别，请人工复核后再提交</li>
+      </ol>
+    </section>
+  </main>
+
+  <script src="../lib/resume-schema.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/vendor/pdf.min.js"></script>
+  <script src="../lib/resume-parser.js"></script>
+  <script src="../lib/agent-client.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

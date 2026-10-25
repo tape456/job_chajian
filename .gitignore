@@ -1,0 +1,25 @@
+.edge-test*/
+.edge-verify-profile/
+.edge-test-profile/
+.edge-ti-profile/
+.workbuddy-ai/
+shots/
+*.log
+.DS_Store
+Thumbs.db
+
+.ref/
+.slices/
+
+# 个人简历数据（含真实姓名/电话/邮箱，禁止上传公开仓库）
+*闪填导入*.json
+*.private.json
+
+# 第三方 pdf.js 构建产物（体积大，用 scripts/fetch-pdfjs 下载，不入库）
+lib/vendor/pdf.min.js
+lib/vendor/pdf.worker.min.js
+
+# 可由脚本重新生成的二进制资源（图标、样例简历 docx/pdf），不入库
+icons/*.png
+test/*.docx
+test/*.pdf

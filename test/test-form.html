@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>XX能源集团有限公司2026届毕业生招聘 - 网上报名</title>
+<style>
+  body { font-family: "SimSun", "Microsoft YaHei", serif; background: #eef1f5; margin: 0; }
+  .page { max-width: 900px; margin: 20px auto; background: #fff; padding: 30px 40px; border: 1px solid #ccd4de; }
+  h1 { font-size: 20px; text-align: center; color: #1a3c6e; }
+  h2 { font-size: 15px; color: #1a3c6e; border-left: 4px solid #1a3c6e; padding-left: 8px; margin: 24px 0 10px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid #b9c4d0; padding: 6px 8px; font-size: 13px; }
+  td.lab { background: #f2f5f9; text-align: right; width: 130px; color: #333; }
+  input[type=text], input[type=date], input[type=month], select, textarea {
+    width: 96%; border: 1px solid #99a; padding: 4px; font-size: 13px; font-family: inherit;
+  }
+  textarea { height: 60px; }
+  .req { color: red; }
+  .radio-line label { margin-right: 14px; font-size: 13px; }
+  .submit-bar { text-align: center; margin: 24px 0; }
+  .submit-bar button { padding: 8px 40px; background: #1a3c6e; color: #fff; border: none; font-size: 14px; cursor: pointer; }
+  iframe { width: 100%; height: 220px; border: 1px solid #b9c4d0; }
+  .note { font-size:12px; color:#888; margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>XX能源集团有限公司2026届毕业生招聘报名表</h1>
+  <p class="note" style="text-align:center">（本页面为插件本地测试页，模拟央国企老式表格布局网申表单）</p>
+
+  <form id="applyForm" onsubmit="return false;">
+    <h2>一、基本信息</h2>
+    <table>
+      <tr>
+        <td class="lab"><span class="req">*</span> 姓名：</td>
+        <td><input type="text" name="realname"></td>
+        <td class="lab"><span class="req">*</span> 性别：</td>
+        <td class="radio-line">
+          <label><input type="radio" name="sex" value="1">男</label>
+          <label><input type="radio" name="sex" value="0">女</label>
+        </td>
+      </tr>
+      <tr>
+        <td class="lab">出生年月：</td>
+        <td><input type="text" name="birthday" placeholder="yyyy-mm"></td>
+        <td class="lab"><span class="req">*</span> 民族：</td>
+        <td><input type="text" name="minzu"></td>
+      </tr>
+      <tr>
+        <td class="lab"><span class="req">*</span> 政治面貌：</td>
+        <td>
+          <select name="zzmm">
+            <option value="">请选择</option>
+            <option value="1">中共党员</option>
+            <option value="2">中共预备党员</option>
+            <option value="3">共青团员</option>
+            <option value="4">群众</option>
+            <option value="5">其他</option>
+          </select>
+        </td>
+        <td class="lab">婚姻状况：</td>
+        <td>
+          <select name="marry">
+            <option value="">请选择</option>
+            <option>未婚</option>
+            <option>已婚</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td class="lab">籍贯：</td>
+        <td><input type="text" name="jiguan"></td>
+        <td class="lab">生源地：</td>
+        <td><input type="text" name="shengyuandi"></td>
+      </tr>
+      <tr>
+        <td class="lab"><span class="req">*</span> 身份证号：</td>
+        <td><input type="text" name="idcard" maxlength="18"></td>
+        <td class="lab"><span class="req">*</span> 手机号码：</td>
+        <td><input type="text" name="mobile" maxlength="11"></td>
+      </tr>
+      <tr>
+        <td class="lab"><span class="req">*</span> 电子邮箱：</td>
+        <td><input type="text" name="mail"></td>
+        <td class="lab">身高(cm)/体重(kg)：</td>
+        <td style="display:flex;gap:6px">
+          <input type="text" name="height" placeholder="身高" style="width:45%">
+          <input type="text" name="weight" placeholder="体重" style="width:45%">
+        </td>
+      </tr>
+      <tr>
+        <td class="lab">户口所在地：</td>
+        <td><input type="text" name="hukouAddr"></td>
+        <td class="lab">现居住地址：</td>
+        <td><input type="text" name="address"></td>
+      </tr>
+      <tr>
+        <td class="lab">属地：</td>
+        <td><input type="text" name="shudi" placeholder="非常规字段，测试未识别/AI"></td>
+        <td class="lab">微信号：</td>
+        <td><input type="text" name="wx"></td>
+      </tr>
+    </table>
+
+    <h2>二、教育背景</h2>
+    <table>
+      <tr>
+        <td class="lab"><span class="req">*</span> 最高学历：</td>
+        <td>
+          <select name="xueli">
+            <option value="">请选择</option>
+            <option>博士研究生</option>
+            <option>硕士研究生</option>
+            <option>大学本科</option>
+            <option>大学专科</option>
+          </select>
+        </td>
+        <td class="lab">最高学位：</td>
+        <td><input type="text" name="xuewei"></td>
+      </tr>
+      <tr>
+        <td class="lab"><span class="req">*</span> 毕业院校：</td>
+        <td><input type="text" name="school"></td>
+        <td class="lab"><span class="req">*</span> 所学专业：</td>
+        <td><input type="text" name="major"></td>
+      </tr>
+      <tr>
+        <td class="lab">入学时间：</td>
+        <td><input type="month" name="eduStart"></td>
+        <td class="lab">毕业时间：</td>
+        <td><input type="month" name="eduEnd"></td>
+      </tr>
+      <tr>
+        <td class="lab">学历学位（合并）：</td>
+        <td><input type="text" name="xuelixuewei" placeholder="如：硕士研究生（硕士）"></td>
+        <td class="lab">GPA/排名：</td>
+        <td><input type="text" name="gpa"></td>
+      </tr>
+      <tr>
+        <td class="lab">主修课程：</td>
+        <td colspan="3"><textarea name="courses"></textarea></td>
+      </tr>
+    </table>
+
+    <h2>三、应聘信息</h2>
+    <table>
+      <tr>
+        <td class="lab"><span class="req">*</span> 申请职位：</td>
+        <td><input type="text" name="applyJob"></td>
+        <td class="lab">期望工作地点：</td>
+        <td><input type="text" name="workCity"></td>
+      </tr>
+      <tr>
+        <td class="lab">期望薪资：</td>
+        <td><input type="text" name="salary"></td>
+        <td class="lab">到岗时间：</td>
+        <td><input type="text" name="arrival"></td>
+      </tr>
+      <tr>
+        <td class="lab">是否服从调剂：</td>
+        <td class="radio-line" colspan="3">
+          <label><input type="radio" name="fz" value="Y">是</label>
+          <label><input type="radio" name="fz" value="N">否</label>
+        </td>
+      </tr>
+    </table>
+
+    <h2>四、经历与评价</h2>
+    <table>
+      <tr>
+        <td class="lab">实习经历：</td>
+        <td colspan="3"><textarea name="internship" style="height:80px"></textarea></td>
+      </tr>
+      <tr>
+        <td class="lab">项目名称：</td>
+        <td><input type="text" name="projectName"></td>
+        <td class="lab">项目职务：</td>
+        <td><input type="text" name="projectRole"></td>
+      </tr>
+      <tr>
+        <td class="lab">团队规模：</td>
+        <td>
+          <select name="projectTeamSize">
+            <option value="">未填写</option>
+            <option>1人</option><option>2-5人</option><option>6-10人</option>
+            <option>11-20人</option><option>21-50人</option><option>50人以上</option>
+          </select>
+        </td>
+        <td class="lab">实践方式：</td>
+        <td>
+          <select name="projectPracticeMethod">
+            <option value="">未填写</option>
+            <option>个人项目</option><option>团队项目</option><option>课程设计</option>
+            <option>毕业设计</option><option>科研项目</option><option>竞赛项目</option><option>企业合作</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td class="lab">项目地址：</td>
+        <td><input type="text" name="projectCity" placeholder="请选择地区"></td>
+        <td class="lab">项目链接：</td>
+        <td><input type="text" name="projectLink"></td>
+      </tr>
+      <tr>
+        <td class="lab">项目证明人姓名：</td>
+        <td><input type="text" name="projectReferrerName"></td>
+        <td class="lab">项目证明人联系方式：</td>
+        <td><input type="text" name="projectReferrerContact"></td>
+      </tr>
+      <tr>
+        <td class="lab">项目经历：</td>
+        <td colspan="3"><textarea name="projectExp" style="height:80px" placeholder="项目详细描述"></textarea></td>
+      </tr>
+      <tr>
+        <td class="lab">项目职责与贡献：</td>
+        <td colspan="3"><textarea name="projectResponsibility" style="height:60px"></textarea></td>
+      </tr>
+      <tr>
+        <td class="lab">组织名称：</td>
+        <td><input type="text" name="campusName"></td>
+        <td class="lab">校园职务：</td>
+        <td><input type="text" name="campusPosition"></td>
+      </tr>
+      <tr>
+        <td class="lab">校园活动及社会实践：</td>
+        <td colspan="3"><textarea name="campusExp" style="height:70px"></textarea></td>
+      </tr>
+      <tr>
+        <td class="lab">获奖情况：</td>
+        <td colspan="3"><textarea name="awards" style="height:60px"></textarea></td>
+      </tr>
+      <tr>
+        <td class="lab">英语水平：</td>
+        <td><input type="text" name="englishLevel"></td>
+        <td class="lab">计算机水平：</td>
+        <td><input type="text" name="computerLevel"></td>
+      </tr>
+      <tr>
+        <td class="lab"><span class="req">*</span> 自我评价：</td>
+        <td colspan="3"><textarea name="selfEval" style="height:90px"></textarea></td>
+      </tr>
+    </table>
+
+    <h2>五、家庭主要成员</h2>
+    <table>
+      <tr>
+        <th>称谓</th><th>姓名</th><th>年龄</th><th>政治面貌</th><th>工作单位及职务</th>
+      </tr>
+      <tr>
+        <td><input type="text" name="f1r"></td>
+        <td><input type="text" name="f1n"></td>
+        <td><input type="text" name="f1a"></td>
+        <td><input type="text" name="f1p"></td>
+        <td><input type="text" name="f1c"></td>
+      </tr>
+      <tr>
+        <td><input type="text" name="f2r"></td>
+        <td><input type="text" name="f2n"></td>
+        <td><input type="text" name="f2a"></td>
+        <td><input type="text" name="f2p"></td>
+        <td><input type="text" name="f2c"></td>
+      </tr>
+    </table>
+
+    <h2>自定义下拉 / 级联测试（element-ui、ant-design 风格）</h2>
+    <table>
+      <tr>
+        <td class="lab">民族（自定义下拉）：</td>
+        <td>
+          <div class="el-select" id="cs-minzu" style="position:relative;width:180px">
+            <input class="el-input__inner" readonly placeholder="请选择民族" style="width:100%">
+          </div>
+        </td>
+        <td class="lab">QQ号：</td>
+        <td><input type="text" name="qq"></td>
+      </tr>
+      <tr>
+        <td class="lab">政治面貌（自定义下拉）：</td>
+        <td>
+          <div class="ant-select" id="cs-zzmm" style="position:relative;width:180px">
+            <div class="ant-select-selector"><span class="ant-select-selection-item">请选择</span></div>
+          </div>
+        </td>
+        <td class="lab">兴趣爱好：</td>
+        <td><input type="text" name="hobby"></td>
+      </tr>
+      <tr>
+        <td class="lab">现居地址（级联选择）：</td>
+        <td>
+          <div class="el-cascader" id="cs-jiguan" style="position:relative;width:220px">
+            <input class="el-input__inner" readonly placeholder="请选择省/市" style="width:100%">
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="lab">面试城市（自绘级联·四列）：</td>
+        <td>
+          <!-- 还原截图组件：只读 input 触发、四列浮层、hover 展开、点「完成选择」才写回 -->
+          <div class="qf-region4" id="cs-region4" style="position:relative;width:260px;display:inline-block;vertical-align:middle">
+            <input class="qf-region4-input" readonly placeholder="请选择地区" style="width:100%;box-sizing:border-box">
+          </div>
+          <div id="ti-probe-box" style="display:inline-block;width:64px;height:24px;line-height:24px;text-align:center;background:#eef;border:1px solid #99a;vertical-align:middle;cursor:pointer">探针</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="lab">档案所在地（自绘级联·严格模式）：</td>
+        <td>
+          <!-- 严格模式：只认 isTrusted 的事件。真实世界里确有组件会这样防程序化点击
+               （拖拽类、部分自绘日历/地区选择器）。合成事件对它完全无效，
+               只有走 chrome.debugger 的可信输入才点得动——这是 L1 的判据。 -->
+          <div class="qf-region4" id="cs-region4-strict" data-strict="1" style="position:relative;width:260px;display:inline-block;vertical-align:middle">
+            <input class="qf-region4-input" readonly placeholder="请选择地区" style="width:100%;box-sizing:border-box">
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <h2>六、紧急联系人与成果（新模块测试）</h2>
+    <table>
+      <tr>
+        <td class="lab">紧急联系人姓名：</td>
+        <td><input type="text" name="emerName"></td>
+        <td class="lab">与本人关系：</td>
+        <td><input type="text" name="emerRelation"></td>
+      </tr>
+      <tr>
+        <td class="lab">紧急联系人电话：</td>
+        <td><input type="text" name="emerPhoneTop"></td>
+        <td class="lab">获奖名称：</td>
+        <td><input type="text" name="awardName"></td>
+      </tr>
+      <tr>
+        <td class="lab">专利名称：</td>
+        <td><input type="text" name="patentName"></td>
+        <td class="lab">论文题目：</td>
+        <td><input type="text" name="paperTitle"></td>
+      </tr>
+    </table>
+
+    <h2>七、工作经历（选区填写测试：请只框选下面这一组）</h2>
+    <table class="qf-region-test" data-test="region">
+      <tr>
+        <td class="lab">工作单位：</td>
+        <td><input type="text" name="rgCompany"></td>
+        <td class="lab">担任职务：</td>
+        <td><input type="text" name="rgPosition"></td>
+      </tr>
+      <tr>
+        <td class="lab">工作时间段：</td>
+        <td colspan="3"><input type="text" name="rgPeriod" placeholder="如 2024-06 至 2024-09"></td>
+      </tr>
+    </table>
+    <table>
+      <tr>
+        <td class="lab">工作单位：</td>
+        <td><input type="text" name="rgOutsideCompany" placeholder="圈外对照字段，选区填写不应写入"></td>
+      </tr>
+    </table>
+
+    <h2>八、教育经历（选区填写回归：只框这一组，应填进「第 1 组-北京科技大学」那条）</h2>
+    <table class="qf-region-edu" data-test="region-edu">
+      <tr>
+        <th scope="row">毕业院校</th><td><input type="text" name="edSchool"></td>
+        <th scope="row">所学专业</th><td><input type="text" name="edMajor"></td>
+      </tr>
+      <tr>
+        <th scope="row">学历</th><td><input type="text" name="edDegree"></td>
+        <th scope="row">院系</th><td><input type="text" name="edDept"></td>
+      </tr>
+      <tr>
+        <th scope="row">入学时间</th><td><input type="text" name="edStart"></td>
+        <th scope="row">GPA</th><td><input type="text" name="edGpa"></td>
+      </tr>
+    </table>
+    <p class="tip">这一组专门盯住规则路径方言（education.0.* vs education.*.*）与「只用所选记录」两件事：
+      一键填写按 latest 策略会取硕士那条，选区填写选第 1 组时必须取北京科技大学。</p>
+
+    <h2>九、扩展字段（四期新增，验证新语义词典）</h2>
+    <table>
+      <tr>
+        <td class="lab">姓名拼音：</td><td><input type="text" name="namePinyin"></td>
+        <td class="lab">户口性质：</td><td><input type="text" name="hukouType"></td>
+      </tr>
+      <tr>
+        <td class="lab">档案所在地：</td><td><input type="text" name="archiveLocation"></td>
+        <td class="lab">是否应届生：</td><td><input type="text" name="isFresher"></td>
+      </tr>
+      <tr>
+        <td class="lab">工作状态：</td><td><input type="text" name="workStatus"></td>
+        <td class="lab">血型：</td><td><input type="text" name="bloodType"></td>
+      </tr>
+      <tr>
+        <td class="lab">职业规划：</td><td><input type="text" name="careerPlan"></td>
+        <td class="lab">招聘信息来源：</td><td><input type="text" name="jobSource"></td>
+      </tr>
+      <tr>
+        <td class="lab">是否接受调剂：</td><td><input type="text" name="acceptAdjust"></td>
+        <td class="lab">期望年薪：</td><td><input type="text" name="expectedAnnualSalary"></td>
+      </tr>
+      <tr>
+        <td class="lab">院系：</td><td><input type="text" name="department"></td>
+        <td class="lab">学号：</td><td><input type="text" name="studentNumber"></td>
+      </tr>
+      <tr>
+        <td class="lab">研究方向：</td><td><input type="text" name="researchDirection"></td>
+        <td class="lab">班级排名：</td><td><input type="text" name="classRank"></td>
+      </tr>
+      <tr>
+        <td class="lab">公司规模：</td><td><input type="text" name="companyScale"></td>
+        <td class="lab">证明人姓名：</td><td><input type="text" name="referrerName"></td>
+      </tr>
+      <tr>
+        <td class="lab">离职原因：</td><td><input type="text" name="leaveReason"></td>
+        <td class="lab">社会实践单位：</td><td><input type="text" name="practiceUnit"></td>
+      </tr>
+      <tr>
+        <td class="lab">证书编号：</td><td><input type="text" name="certNumber"></td>
+        <td class="lab">奖励等级：</td><td><input type="text" name="rewardLevel"></td>
+      </tr>
+      <tr>
+        <td class="lab">发明人：</td><td><input type="text" name="patentInventor"></td>
+        <td class="lab">影响因子：</td><td><input type="text" name="impactFactor"></td>
+      </tr>
+      <tr>
+        <td class="lab">掌握程度：</td><td><input type="text" name="proficiency"></td>
+        <td class="lab">家庭成员教育程度：</td><td><input type="text" name="familyEducation"></td>
+      </tr>
+    </table>
+
+    <h2>十、补充信息（iframe 跨文档测试）</h2>
+    <iframe src="test-iframe.html" title="补充信息"></iframe>
+
+    <div class="submit-bar">
+      <button type="submit">提交报名</button>
+    </div>
+  </form>
+</div>
+
+<script>
+// 模拟 element-ui / ant-design 自定义下拉与级联：点击触发器 → 在 body 追加选项面板 → 点选项写回
+(function () {
+  function closeAll() {
+    document.querySelectorAll('.qf-test-panel').forEach(function (p) { p.remove(); });
+  }
+  // ClickOutside 必须放行「点在面板里」——面板挂在 body 上而不是触发框里，
+  // 漏掉 .qf-test-panel 的话连真人也选不中（mousedown 一响面板就没了）。
+  document.addEventListener('mousedown', function (e) {
+    if (e.target.closest('.qf-test-panel, .el-select, .ant-select, .el-cascader')) return;
+    closeAll();
+  });
+  function panel(anchor) {
+    closeAll();
+    var p = document.createElement('div');
+    p.className = 'qf-test-panel';
+    p.style.cssText = 'position:absolute;z-index:9999;background:#fff;border:1px solid #ddd;';
+    var r = anchor.getBoundingClientRect();
+    p.style.left = (window.scrollX + r.left) + 'px';
+    p.style.top = (window.scrollY + r.bottom + 2) + 'px';
+    document.body.appendChild(p);
+    return p;
+  }
+
+  // element-ui 风格单选下拉
+  function elSelect(root, options) {
+    var input = root.querySelector('input');
+    function open() {
+      var p = panel(root);
+      var ul = document.createElement('ul');
+      ul.className = 'el-select-dropdown';
+      ul.style.listStyle = 'none'; ul.style.margin = '0'; ul.style.padding = '0';
+      var menu = document.createElement('li');
+      menu.className = 'el-select-dropdown__menu';
+      menu.style.listStyle = 'none';
+      options.forEach(function (t) {
+        var li = document.createElement('li');
+        li.className = 'el-select-dropdown__item';
+        li.textContent = t;
+        li.style.padding = '4px 10px'; li.style.cursor = 'pointer';
+        li.addEventListener('click', function () { input.value = t; root.setAttribute('data-value', t); closeAll(); });
+        menu.appendChild(li);
+      });
+      ul.appendChild(menu); p.appendChild(ul);
+    }
+    root.addEventListener('click', function (e) { e.stopPropagation(); open(); });
+  }
+
+  // ant-design 风格单选下拉
+  function antSelect(root, options) {
+    var label = root.querySelector('.ant-select-selection-item');
+    root.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var p = panel(root);
+      p.className += ' ant-select-dropdown';
+      options.forEach(function (t) {
+        var d = document.createElement('div');
+        d.className = 'ant-select-item ant-select-item-option';
+        d.textContent = t; d.style.padding = '4px 10px'; d.style.cursor = 'pointer';
+        d.addEventListener('click', function () { label.textContent = t; root.setAttribute('data-value', t); closeAll(); });
+        p.appendChild(d);
+      });
+    });
+  }
+
+  // element-ui 风格级联（省 → 市）
+  var REGION = {
+    '北京市': ['东城区', '西城区', '海淀区', '朝阳区'],
+    '山东省': ['济南市', '青岛市', '烟台市'],
+    '江苏省': ['南京市', '苏州市', '无锡市'],
+    '上海市': ['黄浦区', '徐汇区', '浦东新区']
+  };
+  function elCascader(root) {
+    var input = root.querySelector('input');
+    root.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var chosen = [];
+      var p = panel(root);
+      p.className += ' el-cascader-panel';
+      p.style.display = 'flex';
+      function column(items, level) {
+        var menu = document.createElement('ul');
+        menu.className = 'el-cascader-menu';
+        menu.style.listStyle = 'none'; menu.style.margin = '0'; menu.style.padding = '0 12px';
+        menu.style.borderRight = '1px solid #eee';
+        items.forEach(function (t) {
+          var li = document.createElement('li');
+          li.className = 'el-cascader-node';
+          li.textContent = t; li.style.cursor = 'pointer'; li.style.padding = '3px 0';
+          li.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            chosen[level] = t; chosen.length = level + 1;
+            var next = menu.nextElementSibling;
+            while (next) { var nx = next.nextElementSibling; next.remove(); next = nx; }
+            if (REGION[t]) { column(REGION[t], level + 1); }
+            else { input.value = chosen.join(' / '); root.setAttribute('data-value', chosen.join('/')); closeAll(); }
+          });
+          menu.appendChild(li);
+        });
+        p.appendChild(menu);
+      }
+      column(Object.keys(REGION), 0);
+    });
+  }
+
+  elSelect(document.getElementById('cs-minzu'), ['汉族', '蒙古族', '回族', '藏族', '维吾尔族', '满族']);
+  antSelect(document.getElementById('cs-zzmm'), ['中共党员', '中共预备党员', '共青团员', '群众', '民主党派']);
+  elCascader(document.getElementById('cs-jiguan'));
+
+  // ---------- 事件可信度探针 ----------
+  // 合成事件 isTrusted=false，CDP 派发的真实事件 isTrusted=true。
+  // 计数写进 document.title，自测脚本可以只读 HTTP /json/list 拿 title，
+  // 不必再开一个 WebSocket 调试会话（同一标签页只允许一个调试客户端，会和扩展的 chrome.debugger 抢）。
+  var EVT = window.__qfEventLog = { total: 0, trusted: 0, byType: {}, last: [] };
+  // 原标题必须保留在后面追加：插件把 document.title 当作「投递记录」的职位名存下来，
+  // 直接覆盖会让 cdp-verify-region-helper 的「列出刚保存的记录」断言失败。
+  var TITLE_BASE = document.title;
+  function bumpTitle() {
+    var v1 = (document.querySelector('#cs-region4 .qf-region4-input') || {}).value || '';
+    var v2 = (document.querySelector('#cs-region4-strict .qf-region4-input') || {}).value || '';
+    var bt = function (k) { return (EVT.byType[k] && EVT.byType[k].trusted) || 0; };
+    // D/M/C = 可信 mousedown / mouseup / click 计数：CDP 派发时三者应当同步增长，
+    // 只涨 D 不涨 M/C 说明按下送达但抬起被丢了，点击根本不会合成。
+    document.title = TITLE_BASE + ' | T' + EVT.trusted + '/N' + (EVT.total - EVT.trusted)
+      + ' D' + bt('mousedown') + 'M' + bt('mouseup') + 'C' + bt('click')
+      + ' R4[' + v1 + '] R4S[' + v2 + ']';
+  }
+  ['pointerover', 'mousemove', 'mousedown', 'mouseup', 'click'].forEach(function (t) {
+    document.addEventListener(t, function (e) {
+      EVT.total++;
+      var b = EVT.byType[t] || (EVT.byType[t] = { total: 0, trusted: 0 });
+      b.total++;
+      if (e.isTrusted) { EVT.trusted++; b.trusted++; }
+      if (t !== 'mousemove' && t !== 'pointerover') {
+        EVT.last.push({ t: t, trusted: !!e.isTrusted, cls: String((e.target && e.target.className) || '').slice(0, 40) });
+        if (EVT.last.length > 40) EVT.last.shift();
+      }
+      bumpTitle();
+    }, true);
+  });
+
+  // ---------- 自绘四列级联（还原截图组件） ----------
+  // 关键还原点：
+  //   1) 第一列是 中国/海外，目标值里不会出现 → 引擎必须会「试分支 + 回读校验 + 回退」
+  //   2) 北京市 → 市辖区 → 海淀区，中间级「市辖区」在目标值里不存在 → 必须会「唯一可展开项就下钻」
+  //   3) 子列靠 mouseenter 展开（合成 click 打不开）
+  //   4) 只有点「完成选择」才写回 input
+  var TREE = {
+    '中国': {
+      '北京市': { '市辖区': { '东城区': 0, '西城区': 0, '朝阳区': 0, '海淀区': 0 } },
+      '天津市': { '市辖区': { '和平区': 0, '南开区': 0 } },
+      '河北省': { '石家庄市': { '长安区': 0, '桥西区': 0 }, '唐山市': { '路南区': 0 } },
+      '山东省': { '济南市': { '历下区': 0, '市中区': 0 }, '青岛市': { '市南区': 0 } }
+    },
+    '海外': {
+      '东南亚': { '新加坡': { '中区': 0 } },
+      '欧洲': { '英国': { '伦敦': 0 } }
+    }
+  };
+  function region4(root) {
+    var strict = root.getAttribute('data-strict') === '1';
+    var input = root.querySelector('.qf-region4-input');
+    var panel = null, colsHost = null, chosen = [];
+    // 严格模式：非可信事件一律当没发生（不展开、不选中、不提交、也不关面板）
+    function gate(e) { return strict && !(e && e.isTrusted); }
+
+    function close() {
+      if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
+      panel = null;
+      colsHost = null;
+    }
+    function commit() {
+      var v = chosen.join('/');
+      input.value = v;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      root.setAttribute('data-value', v);
+      close();
+      bumpTitle();          // 提交后立刻刷新标题，自测不必等到下一个事件才看得到值
+    }
+    function renderColumns() {
+      // 只清列容器：早先这里是 panel.innerHTML=''，会把底部「清空/完成选择」一起抹掉，
+      // 于是第二列之后再也观察不到确认按钮。
+      colsHost.innerHTML = '';
+      var node = TREE, level = 0;
+      while (node) {
+        var keys = Object.keys(node);
+        var menu = document.createElement('ul');
+        menu.className = 'qf-region4-col';
+        menu.dataset.level = String(level);
+        menu.style.listStyle = 'none';
+        menu.style.margin = '0';
+        menu.style.padding = '4px 10px';
+        menu.style.borderRight = '1px solid #eee';
+        menu.style.minWidth = '96px';
+        menu.style.maxHeight = '220px';
+        menu.style.overflowY = 'auto';
+        (function (keys, level, menu) {
+          keys.forEach(function (t) {
+            var li = document.createElement('li');
+            li.className = 'qf-region4-item';
+            li.dataset.text = t;
+            li.dataset.level = String(level);
+            var kids = node[t];
+            var hasKids = !!(kids && Object.keys(kids).length);
+            li.innerHTML = '<span>' + t + '</span>' + (hasKids ? '<span class="qf-region4-arrow">›</span>' : '');
+            li.style.cssText = 'padding:4px 6px;cursor:pointer;display:flex;justify-content:space-between';
+            if (chosen[level] === t) li.style.background = '#e8f0ff';
+            if (hasKids) {
+              // 只有 hover 才展开下一列——和截图那个组件一样
+              li.addEventListener('mouseenter', function (e) {
+                if (gate(e) || chosen[level] === t) return;
+                chosen.length = level;
+                chosen[level] = t;
+                renderColumns();
+              });
+            }
+            li.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              if (gate(ev)) return;
+              chosen.length = level;
+              chosen[level] = t;
+              if (!hasKids) { renderColumns(); }
+            });
+            menu.appendChild(li);
+          });
+        })(keys, level, menu);
+        colsHost.appendChild(menu);
+        node = chosen[level] ? node[chosen[level]] : null;
+        level++;
+      }
+    }
+    function open() {
+      if (panel) return;
+      chosen = [];
+      panel = document.createElement('div');
+      panel.className = 'qf-region4-panel';
+      panel.style.cssText = 'position:absolute;z-index:99999;background:#fff;border:1px solid #d0d7e2;'
+        + 'box-shadow:0 6px 18px rgba(0,0,0,.12);top:' + (root.offsetHeight + 2) + 'px;left:0';
+      panel.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+      // 列容器与底部按钮分开：renderColumns 只清列容器，确认按钮始终在面板上
+      colsHost = document.createElement('div');
+      colsHost.className = 'qf-region4-cols';
+      colsHost.style.display = 'flex';
+      panel.appendChild(colsHost);
+      var foot = document.createElement('div');
+      foot.className = 'qf-region4-foot';
+      foot.style.cssText = 'display:flex;justify-content:space-between;padding:6px 10px;border-top:1px solid #eee';
+      var clear = document.createElement('button');
+      clear.type = 'button';
+      clear.className = 'qf-region4-clear';
+      clear.textContent = '↺ 清空';
+      clear.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (gate(e)) return;
+        chosen = [];
+        input.value = '';
+        root.removeAttribute('data-value');
+        renderColumns();
+      });
+      var ok = document.createElement('button');
+      ok.type = 'button';
+      ok.className = 'qf-region4-ok';
+      ok.textContent = '✓ 完成选择';
+      ok.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (gate(e)) return;
+        commit();
+      });
+      foot.appendChild(clear);
+      foot.appendChild(ok);
+      panel.appendChild(foot);
+      root.appendChild(panel);
+      renderColumns();
+    }
+    root.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (gate(e)) return;
+      if (panel) close(); else open();
+    });
+    // 点外面关面板（真实 ClickOutside 行为，会吞掉我们后发的合成事件）
+    document.addEventListener('mousedown', function (e) {
+      if (panel && !panel.contains(e.target) && !root.contains(e.target)) close();
+    }, true);
+    window.__qfRegion4 = window.__qfRegion4 || {};
+    window.__qfRegion4[root.id] = { open: open, close: close, value: function () { return input.value; } };
+  }
+  region4(document.getElementById('cs-region4'));
+  region4(document.getElementById('cs-region4-strict'));
+})();
+</script>
+</body>
+</html>

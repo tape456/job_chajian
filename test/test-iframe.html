@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>补充信息</title>
+<style>
+  body { font-family: "SimSun", serif; margin: 8px; }
+  table { border-collapse: collapse; width: 100%; }
+  td { border: 1px solid #b9c4d0; padding: 6px; font-size: 13px; }
+  td.lab { background: #f2f5f9; text-align: right; width: 110px; }
+  input, textarea { width: 95%; border: 1px solid #99a; padding: 3px; font-size: 13px; }
+</style>
+</head>
+<body>
+  <table>
+    <tr>
+      <td class="lab">紧急联系人：</td>
+      <td><input type="text" name="emerName"></td>
+      <td class="lab">紧急联系电话：</td>
+      <td><input type="text" name="emerPhone"></td>
+    </tr>
+    <tr>
+      <td class="lab">个人特长：</td>
+      <td colspan="3"><textarea name="speciality"></textarea></td>
+    </tr>
+    <tr>
+      <td class="lab">有何处分情况：</td>
+      <td colspan="3"><input type="text" name="punish"></td>
+    </tr>
+  </table>
+</body>
+</html>
