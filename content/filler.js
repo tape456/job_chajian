@@ -477,9 +477,9 @@
     const syntheticReason = r.reason;
 
     if (root.TrustedInput) {
-      say('trusted');
       const usable = await root.TrustedInput.available();
       if (usable) {
+        say('trusted');
         r = await driveWidget(field, value, Object.assign({ trusted: true }, ctx));
         if (r.ok) return done(true, '', 'trusted');
         if (r.reason === 'cancelled') return done(false, 'cancelled', 'trusted');
