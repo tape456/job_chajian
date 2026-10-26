@@ -399,7 +399,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // 非 lead 帧的完成统计转给 lead 帧，用于汇总「填写完成」弹窗
           if (sender.tab && msg.leadId != null && msg.leadId !== sender.frameId) {
             chrome.tabs.sendMessage(sender.tab.id,
-              { type: 'frame:fillSummary', from: sender.frameId, count: msg.count, failed: msg.failed },
+              { type: 'frame:fillSummary', from: sender.frameId, count: msg.count, failed: msg.failed, requiredMissing: msg.requiredMissing },
               { frameId: msg.leadId }).catch(() => {});
           }
           sendResponse({ ok: true });

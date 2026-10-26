@@ -37,7 +37,7 @@
       width: 54px; height: 54px; border-radius: 27px 0 0 27px; display: grid; place-items: center;
       color: #fff; background: var(--qf-brand-grad); box-shadow: var(--qf-sp-ball);
       border: 2px solid rgba(255,255,255,.72); border-right: none;
-      user-select: none; touch-action: none; cursor: ns-resize;
+      user-select: none; touch-action: none; cursor: pointer;
       transition: transform .18s var(--qf-ease), box-shadow .25s;
       animation: qf-pop-in .5s var(--qf-ease-spring); }
     .qf-ball::before { content: ''; position: absolute; inset: -9px -4px -9px -9px; border-radius: inherit; pointer-events: none;
@@ -63,7 +63,7 @@
       background: var(--qf-glass); box-shadow: var(--qf-sp-panel); border: 1px solid var(--qf-border);
       -webkit-backdrop-filter: blur(18px) saturate(1.35); backdrop-filter: blur(18px) saturate(1.35);
       overflow: hidden; font-size: 12px;
-      transform-origin: 100% 90%; animation: qf-panel-in .24s var(--qf-ease) both; }
+      transform-origin: 100% 100%; animation: qf-panel-in .24s var(--qf-ease) both; }
     /* 不支持背景模糊的浏览器退回接近不透明，避免文字压在花哨页面上不可读 */
     @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
       .qf-panel { background: rgba(255,255,255,.97); }
@@ -89,6 +89,8 @@
     .qf-hero .h1 { margin: 8px 0 2px; font-size: 17px; font-weight: 800; letter-spacing: -.3px; color: var(--qf-t1); }
     .qf-hero .h2 { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--qf-brand); font-weight: 600; }
     .qf-hero .h2 em { font-style: normal; color: var(--qf-t2); font-weight: 400; }
+    /* 球位置较高、面板被压扁时：收起宣传区，优先保证操作按钮可见 */
+    .qf-panel.qf-compact .qf-hero { display: none; }
     .qf-body { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; background: var(--qf-glass-tint); }
     .qf-lead { text-align: center; color: var(--qf-t2); margin: 0; font-size: 12px; }
     .qf-main-actions { display: grid; gap: 8px; }
@@ -272,11 +274,23 @@
     .qf-helper-foot button:hover { color: var(--qf-bad); }`;
   const JOBS = `
     .qf-jobs { width: min(460px, calc(100vw - 30px)); }
+    .qf-jobs-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+    .qf-jobs-filter { font-size: 11px; padding: 3px 9px; border-radius: var(--qf-r-pill);
+      border: 1px solid var(--qf-border-2); background: #fff; color: var(--qf-t2); cursor: pointer; }
+    .qf-jobs-filter.on { background: var(--qf-brand-grad); border-color: transparent; color: #fff; }
+    .qf-jobs-filter .n { opacity: .8; margin-left: 3px; }
     .qf-jobs-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--qf-border); border-radius: var(--qf-r-sm); }
     .qf-job { display: flex; gap: 8px; align-items: flex-start; padding: 9px 10px; border-bottom: 1px solid #eef3fb; }
     .qf-job:last-child { border-bottom: none; }
     .qf-job .info { flex: 1; min-width: 0; }
-    .qf-job .ti { font-weight: 600; color: var(--qf-t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .qf-job .top { display: flex; align-items: center; gap: 6px; }
+    .qf-job .ti { flex: 1; min-width: 0; font-weight: 600; color: var(--qf-t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .qf-job .st-sel { flex: none; font-size: 11px; padding: 2px 4px; border-radius: var(--qf-r-pill);
+      border: 1px solid var(--qf-border-2); background: #fff; color: var(--qf-t1); cursor: pointer; }
+    .qf-job .st-sel.st-offer { color: #15803d; border-color: #c7f0d8; background: #ecfdf3; }
+    .qf-job .st-sel.st-interview { color: #7c3aed; border-color: #e0d4ff; background: #f5f0ff; }
+    .qf-job .st-sel.st-written { color: #b45309; border-color: #ffe0a6; background: #fff7e8; }
+    .qf-job .st-sel.st-closed { color: #64748b; background: #f4f6fa; }
     .qf-job .meta { color: var(--qf-t3); font-size: 11px; margin-top: 2px; overflow-wrap: anywhere; }
     .qf-job .note { color: var(--qf-t2); font-size: 11.5px; margin-top: 3px; overflow-wrap: anywhere; }
     .qf-job .del { color: var(--qf-t3); font-size: 16px; padding: 0 4px; line-height: 1; }
@@ -298,10 +312,19 @@
   const STYLE = [TOKENS, BASE, BALL, PANEL, SELECT, DIALOG, PROGRESS, HELPER, JOBS, TOAST].join('\n');
 
   const POS_KEY = 'qfBallPosition';
+  // 投递状态（与 lib/storage.js 的 JOB_STATUS 保持一致；overlay 先加载，不能反向引用）
+  const JOB_STATUSES = [
+    { key: 'applied', label: '已投递' },
+    { key: 'written', label: '笔试' },
+    { key: 'interview', label: '面试' },
+    { key: 'offer', label: 'Offer' },
+    { key: 'closed', label: '已结束' }
+  ];
   const HELPER_TIP = '第一步：点击字段按钮；第二步：在网页中点击要填写的输入框。';
 
   let host, shadow, ui = {}, handlers = {};
   let dragState, selectMask, selectionCallback, toastTimer, toastOutTimer, panelAnimTimer, savePosTimer, watchdogTimer, removalObserver, miniEl;
+  let miniTop = NaN;   // 隐藏球时记下球的中心高度，让边缘恢复把手出现在同一位置
   let helperWait = null;
 
   function node(tag, cls, text) {
@@ -383,6 +406,7 @@
     const ball = node('div', 'qf-ball qf-hidden');
     ball.setAttribute('role', 'button');
     ball.setAttribute('aria-label', '打开网申速填助手');
+    ball.setAttribute('aria-expanded', 'false');
     ball.title = '点击打开助手｜可沿右边框上下拖动';
     ball.tabIndex = 0;
     ball.innerHTML = '<span class="icon">\u26A1\uFE0E</span>';
@@ -417,6 +441,17 @@
     ui.ball.style.top = top + 'px';
     ui.ball.style.bottom = 'auto';
   }
+  // 球的图标跟着面板开合切换：⚡ = 可打开，× = 可收起，避免"点了球不知道会发生什么"
+  function setBallOpen(open) {
+    if (!ui.ball) return;
+    ui.ball.classList.toggle('is-open', !!open);
+    ui.ball.setAttribute('aria-expanded', open ? 'true' : 'false');
+    ui.ball.setAttribute('aria-label', open ? '收起网申速填助手' : '打开网申速填助手');
+    ui.ball.title = open ? '点击收起助手｜可沿右边框上下拖动' : '点击打开助手｜可沿右边框上下拖动';
+    const icon = ui.ball.querySelector('.icon');
+    if (icon) icon.textContent = open ? '\u00D7' : '\u26A1\uFE0E';
+  }
+
   function resetBallPos() {
     if (!ui.ball) return;
     Object.assign(ui.ball.style, { left: '', top: '', right: '', bottom: '' });
@@ -430,25 +465,34 @@
     ball.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
       const r = ball.getBoundingClientRect();
-      dragState = { id: e.pointerId, y: e.clientY, top: r.top, h: r.height, moved: false };
+      dragState = { id: e.pointerId, y: e.clientY, top: r.top, h: r.height, moved: false, panelWasOpen: false };
       try { ball.setPointerCapture(e.pointerId); } catch (err) {}
     });
     ball.addEventListener('pointermove', e => {
       if (!dragState || dragState.id !== e.pointerId) return;
       const dy = e.clientY - dragState.y;
       if (Math.abs(dy) > 6) {
-        if (!dragState.moved) ball.classList.add('dragging');
-        dragState.moved = true;
+        if (!dragState.moved) {
+          ball.classList.add('dragging');
+          dragState.moved = true;
+          // 拖动期间收起面板：面板比球大得多，跟着挪会一路盖住球和页面
+          dragState.panelWasOpen = !!ui.panel && !ui.panel.classList.contains('qf-hidden');
+          if (dragState.panelWasOpen) { ui.panel.classList.add('qf-hidden'); setBallOpen(false); }
+        }
       }
       if (!dragState.moved) return;
       applyBallTop(clampY(dragState.top + dy, dragState.h));
-      positionPanelNearBall();
     });
     const end = () => {
       if (dragState && dragState.moved) {
         lastDragEnd = Date.now();
         ball.classList.remove('dragging');
         saveBallTop(parseFloat(ball.style.top));
+        if (dragState.panelWasOpen) {
+          ui.panel.classList.remove('qf-hidden', 'qf-out');
+          setBallOpen(true);
+          positionPanelNearBall();
+        }
       }
       dragState = null;
     };
@@ -555,10 +599,12 @@
     clearTimeout(panelAnimTimer);
     if (show) {
       ui.panel.classList.remove('qf-out', 'qf-hidden');
+      setBallOpen(true);
       positionPanelNearBall();
     } else {
       if (ui.panel.classList.contains('qf-hidden')) return;
       ui.panel.classList.add('qf-out');
+      setBallOpen(false);
       panelAnimTimer = setTimeout(() => {
         ui.panel.classList.add('qf-hidden');
         ui.panel.classList.remove('qf-out');
@@ -573,14 +619,27 @@
     if (btn) btn.classList.toggle('open', willShow);
     if (willShow) positionPanelNearBall();
   }
+  // 面板永远开在悬浮球上方：先把自身高度压进"球上方的可用空间"，再贴着球定位；
+  // 球靠得太高时让球先往下避让一点（只改当前显示，不写进位置记忆），保证面板完整且不压住球。
   function positionPanelNearBall() {
     if (!ui.ball || !ui.panel) return;
-    const r = ui.ball.getBoundingClientRect();
-    const pw = Math.min(300, innerWidth - 16), ph = Math.min(ui.panel.offsetHeight || 480, innerHeight - 16);
-    const left = Math.max(8, Math.min(innerWidth - pw - 8, r.right - pw));
-    let top = r.top - ph - 10;
-    if (top < 8) top = Math.min(r.bottom + 10, innerHeight - ph - 8);
-    Object.assign(ui.panel.style, { left: left + 'px', top: Math.max(8, top) + 'px', right: 'auto', bottom: 'auto' });
+    if (ui.panel.classList.contains('qf-hidden')) return;   // 关着的时候不必计算
+    const GAP = 10, EDGE = 8, MIN_H = 120;
+    let r = ui.ball.getBoundingClientRect();
+    const cap = Math.min(innerHeight * 0.85, 660);
+    let maxH = Math.min(cap, r.top - GAP - EDGE);
+    if (maxH < MIN_H) {
+      const yieldTop = Math.min(innerHeight - r.height - EDGE, MIN_H + GAP + EDGE);
+      if (yieldTop > r.top) { applyBallTop(yieldTop); r = ui.ball.getBoundingClientRect(); }
+      maxH = Math.max(80, Math.min(cap, r.top - GAP - EDGE));
+    }
+    ui.panel.style.maxHeight = maxH + 'px';
+    // 上方空间紧张时收起 hero 宣传区，把位置让给操作按钮
+    ui.panel.classList.toggle('qf-compact', maxH < 560);
+    const pw = ui.panel.offsetWidth || Math.min(320, innerWidth - 16);
+    const ph = ui.panel.offsetHeight || 480;
+    const left = Math.max(EDGE, Math.min(innerWidth - pw - EDGE, r.right - pw));
+    Object.assign(ui.panel.style, { left: left + 'px', top: Math.max(EDGE, r.top - ph - GAP) + 'px', right: 'auto', bottom: 'auto' });
   }
 
   // kind 决定配色与停留时间；warn/danger 要说清后果，给足阅读时间，也方便测试按 class 断言
@@ -660,7 +719,13 @@
     ui.progress.querySelector('[data-act=done]').classList.remove('qf-hidden');
     ui.progress.querySelector('[data-role=doneAsk]').classList.toggle('qf-hidden', !(savedSeconds > 0));
   }
-  function closeProgress() { ui.progress?.classList.add('qf-hidden'); }
+  // 进度窗用完即销毁：只加 qf-hidden 会在 shadowRoot 里留下一个隐藏遮罩，
+  // 其它弹窗/测试按 .qf-shade 找元素时会先命中它
+  function closeProgress() {
+    if (!ui.progress) return;
+    ui.progress.remove();
+    ui.progress = null;
+  }
 
   // ---------------- 选区填写 ----------------
   function startSelection(callback) {
@@ -914,15 +979,24 @@
     const shade = node('div', 'qf-shade');
     const dialog = node('div', 'qf-dialog');
     dialog.appendChild(node('h3', '', '记录当前职位'));
-    dialog.appendChild(node('p', 'qf-sub', '保存这条招聘信息，方便之后回访投递'));
+    dialog.appendChild(node('p', 'qf-sub', '保存这条招聘信息，之后在「管理投递」里跟踪进度'));
     dialog.appendChild(node('label', 'qf-fl', '职位名称'));
     const i1 = node('input'); i1.type = 'text'; i1.value = (info && info.title) || '';
     dialog.appendChild(i1);
     dialog.appendChild(node('label', 'qf-fl', '职位链接'));
     const i2 = node('input'); i2.type = 'text'; i2.value = (info && info.url) || '';
     dialog.appendChild(i2);
+    dialog.appendChild(node('label', 'qf-fl', '投递状态'));
+    const st = document.createElement('select');
+    st.className = 'qf-select';
+    for (const s of JOB_STATUSES) {
+      const op = document.createElement('option');
+      op.value = s.key; op.textContent = s.label;
+      st.appendChild(op);
+    }
+    dialog.appendChild(st);
     dialog.appendChild(node('label', 'qf-fl', '备注（可选）'));
-    const i3 = node('textarea'); i3.rows = 2; i3.placeholder = '例如：已投递 / 待笔试 / 岗位编号';
+    const i3 = node('textarea'); i3.rows = 2; i3.placeholder = '例如：岗位编号 / 联系人 / 下一步要准备的材料';
     dialog.appendChild(i3);
     const actions = node('div', 'qf-dialog-actions');
     const cancel = node('button', 'qf-btn', '取消');
@@ -930,7 +1004,7 @@
     cancel.addEventListener('click', () => shade.remove());
     save.addEventListener('click', () => {
       shade.remove();
-      onSave?.({ title: i1.value.trim(), url: i2.value.trim(), note: i3.value.trim() });
+      onSave?.({ title: i1.value.trim(), url: i2.value.trim(), note: i3.value.trim(), status: st.value });
     });
     actions.append(cancel, save);
     dialog.appendChild(actions);
@@ -945,6 +1019,8 @@
     dialog.appendChild(node('h3', '', '管理投递'));
     const sub = node('p', 'qf-sub', '');
     dialog.appendChild(sub);
+    const filters = node('div', 'qf-jobs-filters');
+    dialog.appendChild(filters);
     const box = node('div', 'qf-jobs-list');
     dialog.appendChild(box);
     const actions = node('div', 'qf-dialog-actions');
@@ -953,24 +1029,61 @@
     const closeBtn = node('button', 'qf-btn primary', '关闭');
     actions.append(exportBtn, clearBtn, closeBtn);
     dialog.appendChild(actions);
+    let active = 'all';
+    const statusOf = r => (JOB_STATUSES.some(s => s.key === r.status) ? r.status : 'applied');
     async function render() {
-      const list = (await getList?.()) || [];
+      const all = (await getList?.()) || [];
+      const counts = { all: all.length };
+      for (const s of JOB_STATUSES) counts[s.key] = 0;
+      for (const r of all) counts[statusOf(r)] = (counts[statusOf(r)] || 0) + 1;
+
+      filters.replaceChildren();
+      for (const s of [{ key: 'all', label: '全部' }].concat(JOB_STATUSES)) {
+        if (s.key !== 'all' && !counts[s.key]) continue;   // 没有记录的状态不占位置
+        const chip = node('button', 'qf-jobs-filter' + (active === s.key ? ' on' : ''));
+        chip.append(document.createTextNode(s.label), node('span', 'n', String(counts[s.key] || 0)));
+        chip.title = '只看「' + s.label + '」的记录';
+        chip.addEventListener('click', () => { active = s.key; render(); });
+        filters.appendChild(chip);
+      }
+
+      const list = active === 'all' ? all : all.filter(r => statusOf(r) === active);
       box.replaceChildren();
-      if (!list.length) box.appendChild(node('div', 'qf-rk-empty', '还没有记录。在职位页面点击「记录职位」即可保存。'));
+      if (!list.length) {
+        box.appendChild(node('div', 'qf-rk-empty',
+          active === 'all' ? '还没有记录。在职位页面点击「记录职位」即可保存。' : '这个状态下还没有记录。'));
+      }
       for (const r of list) {
         const row = node('div', 'qf-job');
         const info = node('div', 'info');
-        info.appendChild(node('div', 'ti', r.title || '(未命名职位)'));
-        info.appendChild(node('div', 'meta', new Date(r.ts || Date.now()).toLocaleString() + ' · ' + (r.url || '')));
+        const top = node('div', 'top');
+        top.appendChild(node('div', 'ti', r.title || '(未命名职位)'));
+        const sel = document.createElement('select');
+        sel.className = 'st-sel st-' + statusOf(r);
+        sel.title = '更新投递状态';
+        for (const s of JOB_STATUSES) {
+          const op = document.createElement('option');
+          op.value = s.key; op.textContent = s.label;
+          if (statusOf(r) === s.key) op.selected = true;
+          sel.appendChild(op);
+        }
+        sel.addEventListener('change', async () => {
+          await o.onUpdateStatus?.(r.id, sel.value);
+          await render();
+        });
+        top.appendChild(sel);
+        info.appendChild(top);
+        info.appendChild(node('div', 'meta', new Date(r.updatedAt || r.ts || Date.now()).toLocaleString() + ' · ' + (r.url || '')));
         if (r.note) info.appendChild(node('div', 'note', r.note));
         const del = node('button', 'del', '×'); del.title = '删除这条记录';
         del.addEventListener('click', async () => { await o.onDelete?.(r.id); render(); });
         row.append(info, del); box.appendChild(row);
       }
-      sub.textContent = '共 ' + list.length + ' 条本地记录（仅存本机，不会上传）';
+      const ongoing = all.filter(r => ['applied', 'written', 'interview'].includes(statusOf(r))).length;
+      sub.textContent = '共 ' + all.length + ' 条本地记录（进行中 ' + ongoing + ' 条，仅存本机）';
     }
     exportBtn.addEventListener('click', async () => o.onExport?.(await getList?.()));
-    clearBtn.addEventListener('click', async () => { await o.onClear?.(); render(); });
+    clearBtn.addEventListener('click', async () => { await o.onClear?.(); active = 'all'; render(); });
     closeBtn.addEventListener('click', () => shade.remove());
     shade.appendChild(dialog); shadow.appendChild(shade);
     render();
@@ -1015,7 +1128,14 @@
       if (!ui.ball) return;
       ui.ball.classList.remove('qf-hidden');
     },
-    hideBall() { if (ui.ball) ui.ball.classList.add('qf-hidden'); togglePanel(false); },
+    hideBall() {
+      if (ui.ball) {
+        const r = ui.ball.getBoundingClientRect();
+        if (r.height) miniTop = r.top + r.height / 2;
+        ui.ball.classList.add('qf-hidden');
+      }
+      togglePanel(false);
+    },
     showMini(onClick) {
       if (!miniEl || !miniEl.isConnected) {
         miniEl = node('div', 'qf-mini', '⚡︎');
@@ -1023,6 +1143,7 @@
         miniEl.addEventListener('click', () => { api.hideMini(); onClick?.(); });
         shadow.appendChild(miniEl);
       }
+      if (isFinite(miniTop)) miniEl.style.top = Math.round(miniTop) + 'px';
       ui.mini = miniEl;
     },
     hideMini() { if (miniEl) miniEl.remove(); miniEl = null; ui.mini = null; },

@@ -20,33 +20,37 @@
     fire(el, 'change');
   }
 
-  // ---------- 日期处理 ----------
-  function parseDateParts(v) {
-    const m = String(v).match(/(\d{4})\D?(\d{1,2})?(?:\D?(\d{1,2}))?/);
-    if (!m) return null;
-    return { y: m[1], mo: m[2] ? String(m[2]).padStart(2, '0') : '', d: m[3] ? String(m[3]).padStart(2, '0') : '' };
+  // 写入后回读：页面会自动格式化（日期分隔符、金额千分位、手机号空格）或整体回滚，
+  // 所以比较要宽松——只要"语义上还是同一个值"就算成功，避免把格式化误判成失败。
+  function sameValue(expected, actual) {
+    const a = String(expected == null ? '' : expected).trim();
+    const b = String(actual == null ? '' : actual).trim();
+    if (a === b) return true;
+    const strip = s => s.replace(/[\s,，]/g, '').toLowerCase();
+    if (strip(a) === strip(b)) return true;
+    const na = parseFloat(a), nb = parseFloat(b);
+    if (isFinite(na) && isFinite(nb) && na === nb) return true;
+    const digits = s => (s.match(/\d{4}\D?\d{0,2}\D?\d{0,2}/) || [''])[0].replace(/\D/g, '');
+    const da = digits(a), db = digits(b);
+    if (da.length >= 4 && db.length >= 4) {
+      if (da === db) return true;
+      const short = da.length < db.length ? da : db;
+      // 页面给 "2024-06" 补全成 "2024-06-01" 也算同一天
+      if (short.length >= 6 && (da.startsWith(short) || db.startsWith(short))) return true;
+    }
+    return false;
   }
 
-  // 根据目标字段推断期望的日期格式并转换
+  // ---------- 日期处理 ----------
+  // 格式推断本身在 FieldRules.formatDate（纯函数，可单测）；这里只负责收集控件提示
   function formatDateFor(value, field) {
-    const p = parseDateParts(value);
-    if (!p) return value;
-    const el = field.el;
-    const type = field.inputType || '';
-    if (type === 'date') return p.mo ? `${p.y}-${p.mo}-${p.d || '01'}` : '';
-    if (type === 'month') return p.mo ? `${p.y}-${p.mo}` : '';
-    // 文本框：从 placeholder/name/信号中猜格式
+    const el = field.el || {};
     const hint = [el.placeholder || '', el.name || '', el.id || '', ...(field.signals || [])].join(' ').toLowerCase();
-    if (/yyyy[-/.年]mm[-/.月]dd|yyyy[-/.]mm[-/.]dd|日期格式.*日/.test(hint)) {
-      return `${p.y}-${p.mo || '01'}-${p.d || '01'}`;
-    }
-    if (/yyyy\s*年\s*mm\s*月/.test(hint)) {
-      return `${p.y}年${p.mo || '01'}月${p.d ? p.d + '日' : ''}`;
-    }
-    if (/yyyy[-/.]mm(?![-/.]dd)/.test(hint) || (!p.d && /yyyy/.test(hint))) {
-      return p.mo ? `${p.y}-${p.mo}` : p.y;
-    }
-    return value; // 原样
+    return FR.formatDate(value, {
+      type: field.inputType || '',
+      hint,
+      maxLength: el.getAttribute ? parseInt(el.getAttribute('maxlength'), 10) : 0
+    });
   }
 
   const DATE_PATH_HINT = /(date|birth|start|end|period|graduation|time)/i;
@@ -58,24 +62,32 @@
   }
 
   // ---------- 各类控件填写 ----------
-  function fillTextInput(field, value) {
+  async function fillTextInput(field, value) {
     let v = String(value);
     if (isDateValue(field)) v = formatDateFor(v, field);
     const el = field.el;
     const max = parseInt(el.getAttribute('maxlength'), 10);
     if (max > 0 && v.length > max) v = v.slice(0, max);
     setNativeValue(el, v);
-    return true;
+    if (sameValue(v, el.value)) return true;
+    // 受控组件可能要等一轮事件循环才结算，仍不生效就再写一次并失焦触发校验
+    await new Promise(r => setTimeout(r, 30));
+    if (sameValue(v, el.value)) return true;
+    setNativeValue(el, v);
+    try { el.blur(); } catch (e) {}
+    await new Promise(r => setTimeout(r, 30));
+    return sameValue(v, el.value) ? true : 'mismatch';
   }
 
   function fillContenteditable(field, value) {
     const el = field.el;
+    const v = String(value);
     el.focus();
-    el.textContent = String(value);
+    el.textContent = v;
     fire(el, 'input');
     fire(el, 'change');
     el.blur();
-    return true;
+    return sameValue(v, el.textContent) ? true : 'mismatch';
   }
 
   function fillSelect(field, value) {
@@ -99,7 +111,7 @@
     fire(el, 'change');
     // 部分框架监听 click
     target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    return true;
+    return sameValue(String(target.value), el.value) ? true : 'mismatch';
   }
 
   function fillRadio(field, value) {
@@ -107,7 +119,7 @@
       if (FR.matchOptionValue(opt.text, String(value)) || FR.matchOptionValue(opt.el.value, String(value))) {
         if (!opt.el.checked) opt.el.click();
         else { fire(opt.el, 'change'); }
-        return true;
+        return opt.el.checked ? true : 'mismatch';
       }
     }
     return false;
@@ -118,19 +130,20 @@
     const shouldCheck = truthy.includes(String(value).trim().toLowerCase());
     const el = field.el;
     if (shouldCheck !== !!el.checked) el.click();
-    return true;
+    return el.checked === shouldCheck ? true : 'mismatch';
   }
 
   function fillCheckboxGroup(field, value) {
     // 简历值中出现的选项打勾（如技能、证书多选）
     const v = String(value);
-    let any = false;
+    let any = false, mismatch = false;
     for (const opt of field.options) {
       const t = FR.normalize(opt.text);
       const want = t && (v.includes(opt.text.trim()) || FR.matchOptionValue(opt.text, v));
       if (want !== !!opt.el.checked) { opt.el.click(); }
-      if (want) any = true;
+      if (want) { any = true; if (!opt.el.checked) mismatch = true; }
     }
+    if (mismatch) return 'mismatch';
     return any ? true : 'none';
   }
 
@@ -417,7 +430,9 @@
     try {
       switch (field.kind) {
         case 'select': {
-          ok = fillSelect(field, value);
+          const sel = fillSelect(field, value);
+          ok = sel;
+          if (sel === 'mismatch') { ok = false; reason = 'verified_mismatch'; break; }
           if (ok !== true) {
             const i = await askAiOption(field.options, value, o.label);
             if (i >= 0 && field.options[i]) {
@@ -433,29 +448,58 @@
           break;
         }
         case 'radio': {
-          ok = fillRadio(field, value);
+          const rad = fillRadio(field, value);
+          ok = rad;
+          if (rad === 'mismatch') { ok = false; reason = 'verified_mismatch'; break; }
           if (ok !== true) {
             const i = await askAiOption(field.options, value, o.label);
             if (i >= 0 && field.options[i] && field.options[i].el) {
               field.options[i].el.click();
-              ok = true; layer = 'ai';
+              ok = field.options[i].el.checked ? true : false;
+              if (!ok) reason = 'verified_mismatch';
+              else layer = 'ai';
             } else {
               reason = 'option_not_found';
             }
           }
           break;
         }
-        case 'checkbox': ok = fillSingleCheckbox(field, value); break;
-        case 'checkboxGroup': ok = fillCheckboxGroup(field, value); break;
-        case 'contenteditable': ok = fillContenteditable(field, value); break;
-        case 'textarea': ok = fillTextInput(field, value); break;
+        case 'checkbox': {
+          const cb = fillSingleCheckbox(field, value);
+          ok = cb === true;
+          if (cb === 'mismatch') reason = 'verified_mismatch';
+          break;
+        }
+        case 'checkboxGroup': {
+          const cbg = fillCheckboxGroup(field, value);
+          if (cbg === 'mismatch') { ok = false; reason = 'verified_mismatch'; }
+          else ok = cbg;
+          break;
+        }
+        case 'contenteditable': {
+          const ce = fillContenteditable(field, value);
+          ok = ce === true;
+          if (ce === 'mismatch') reason = 'verified_mismatch';
+          break;
+        }
+        case 'textarea': {
+          const ta = await fillTextInput(field, value);
+          ok = ta === true;
+          if (ta === 'mismatch') reason = 'verified_mismatch';
+          break;
+        }
         case 'dropdown':
         case 'cascader': {
           const r = await fillWidget(field, value, o);
           ok = r.ok; reason = r.reason; layer = r.layer;
           break;
         }
-        default: ok = fillTextInput(field, value); break;
+        default: {
+          const txt = await fillTextInput(field, value);
+          ok = txt === true;
+          if (txt === 'mismatch') reason = 'verified_mismatch';
+          break;
+        }
       }
     } catch (e) {
       ok = false;
@@ -528,7 +572,8 @@
     failed: '__qf_failed',
     missing: '__qf_missing',
     unmatched: '__qf_unmatched',
-    skipped: '__qf_skip'      // 选区填写专用：识别得到但不属于本次选中的那一组
+    skipped: '__qf_skip',      // 选区填写专用：识别得到但不属于本次选中的那一组
+    required: '__qf_required'  // 必填但最终仍为空（含未识别），比「简历缺失」更醒目
   };
 
   function markField(field, state, match, reason) {
@@ -543,7 +588,7 @@
   }
 
   function stateText(s) {
-    return { filled: '已填写', 'filled-other': '已选"其他"，请人工确认', failed: '填写失败，请手动处理', missing: '简历缺失该项，请补充', unmatched: '未识别，请手动填写', skipped: '不属于本次选中的这一组，已跳过' }[s] || s;
+    return { filled: '已填写', 'filled-other': '已选"其他"，请人工确认', failed: '填写失败，请手动处理', missing: '简历缺失该项，请补充', unmatched: '未识别，请手动填写', skipped: '不属于本次选中的这一组，已跳过', required: '必填项为空，请手动补充' }[s] || s;
   }
 
   // 失败原因码 → 人话。放在这里而不是新文件：它只是一张查找表，

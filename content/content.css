@@ -35,6 +35,14 @@
   outline-offset: 1px !important;
 }
 
+/* 必填但最终仍为空：实线红框 + 外扩光晕，明显区别于「简历缺失」的虚线 */
+.__qf_required {
+  outline: 2px solid #dc2626 !important;
+  outline-offset: 1px !important;
+  background-color: rgba(220, 38, 38, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14) !important;
+}
+
 /* radio/checkbox 组高亮其 label */
 label:has(> .__qf_filled),
 label:has(.__qf_filled) {
@@ -44,5 +52,10 @@ label:has(.__qf_filled) {
 label:has(> .__qf_missing),
 label:has(.__qf_missing) {
   outline: 1px dashed #dc2626 !important;
+  border-radius: 3px;
+}
+label:has(> .__qf_required),
+label:has(.__qf_required) {
+  outline: 2px solid #dc2626 !important;
   border-radius: 3px;
 }

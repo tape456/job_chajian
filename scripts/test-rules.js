@@ -447,5 +447,44 @@ const st2 = { lastAuto: null };
 check('首次加载手改内容不覆盖', !RS.syncCertificatesSkill(customFirst, st2)
   && customFirst.skill.certificates === '自定义文案');
 
+console.log('\n[ 选项数值边界（"1" 不再命中 "10"） ]');
+check('1 不匹配 10', !FR.matchOptionValue('10', '1'));
+check('1 不匹配 10000人以上', !FR.matchOptionValue('10000人以上', '1'));
+check('8 匹配 8', FR.matchOptionValue('8', '8'));
+check('15 匹配 15万', FR.matchOptionValue('15万', '15'));
+check('15 不匹配 150', !FR.matchOptionValue('150', '15'));
+check('10000人以上 仍匹配自身', FR.matchOptionValue('10000人以上', '10000人以上'));
+
+console.log('\n[ 日期格式自适应 ]');
+const FD = FR.formatDate;
+check('date 类型补日', FD('2024-06', { type: 'date' }) === '2024-06-01', FD('2024-06', { type: 'date' }));
+check('month 类型截断', FD('2024-06-15', { type: 'month' }) === '2024-06', FD('2024-06-15', { type: 'month' }));
+check('YYYYMM 提示', FD('2024-06-15', { hint: '请输入 yyyymm 格式' }) === '202406');
+check('YYYYMMDD 提示', FD('2024-06-15', { hint: 'yyyymmdd' }) === '20240615');
+check('斜杠格式提示', FD('2024-06-15', { hint: 'yyyy/mm/dd' }) === '2024/06/15', FD('2024-06-15', { hint: 'yyyy/mm/dd' }));
+check('点分隔格式提示', FD('2024-06', { hint: 'yyyy.mm' }) === '2024.06');
+check('中文年月', FD('2024-06', { hint: 'yyyy年mm月' }) === '2024年06月');
+check('maxlength=6 → YYYYMM', FD('2024/6', { maxLength: 6 }) === '202406');
+check('maxlength=8 → YYYYMMDD', FD('2024.6', { maxLength: 8 }) === '20240601');
+check('无提示保持原值', FD('2024-06-15', {}) === '2024-06-15');
+
+console.log('\n[ 板块上下文 ]');
+check('实习经历标题 → internship', FR.scopeOf('十、实习经历（板块上下文）') === 'internship', FR.scopeOf('十、实习经历（板块上下文）'));
+check('工作经历标题 → work', FR.scopeOf('七、工作经历') === 'work', FR.scopeOf('七、工作经历'));
+check('教育背景标题 → education', FR.scopeOf('二、教育背景') === 'education');
+check('家庭成员 → family', FR.scopeOf('家庭成员') === 'family');
+check('无关标题 → 空', FR.scopeOf('九、扩展字段') === '', FR.scopeOf('九、扩展字段'));
+const scopedPaths = ['work.*.referrerName', 'internship.*.referrerName', 'project.*.referrerName'];
+check('实习区块优先取实习证明人', FR.preferScope(scopedPaths, 'internship')[0] === 'internship.*.referrerName', FR.preferScope(scopedPaths, 'internship'));
+check('无板块时保持原顺序', FR.preferScope(scopedPaths, '') === scopedPaths);
+check('板块没有对应路径时保持原顺序', JSON.stringify(FR.preferScope(['basic.name'], 'internship')) === JSON.stringify(['basic.name']));
+
+console.log('\n[ 英文信号的词边界 ]');
+check('constellation 不再命中电话', !FR.matchSignal('constellation') || FR.matchSignal('constellation').ruleId !== 'phone', FR.matchSignal('constellation') && FR.matchSignal('constellation').ruleId);
+check('hotelName 不再命中电话', !FR.matchSignal('hotelName') || FR.matchSignal('hotelName').ruleId !== 'phone');
+check('contactTel 仍命中电话', (FR.matchSignal('contactTel') || {}).ruleId === 'phone', FR.matchSignal('contactTel') && FR.matchSignal('contactTel').ruleId);
+check('userName 仍命中姓名', (FR.matchSignal('userName') || {}).ruleId === 'name', FR.matchSignal('userName') && FR.matchSignal('userName').ruleId);
+check('中文包含匹配不受影响', (FR.matchSignal('请输入手机号') || {}).ruleId === 'phone');
+
 console.log(`\nTOTAL ${pass + fail} PASS ${pass} FAIL ${fail}`);
 process.exit(fail ? 1 : 0);

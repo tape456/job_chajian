@@ -136,6 +136,18 @@ function check(name, cond, extra) {
   check('可填字段数 > 25', parseInt(stats.matched) > 25, stats.matched);
 
   console.log('\n[3] 一键填写（含 iframe 子文档）');
+  // 板块上下文：临时插入一个「实习经历」区块，区块内的通用标签必须取实习记录而不是工作经历
+  await cdp.evaluate(`(() => {
+    if (document.getElementById('__qf_tmp_scope__')) return true;
+    const sec = document.createElement('section');
+    sec.id = '__qf_tmp_scope__';
+    sec.innerHTML = '<h2>十、实习经历</h2><table>' +
+      '<tr><td class="lab">证明人姓名：</td><td><input type="text" name="tmpInternReferrer"></td></tr>' +
+      '<tr><td class="lab">实习单位：</td><td><input type="text" name="tmpInternCompany"></td></tr>' +
+      '<tr><td class="lab"><span class="req">*</span> 星座：</td><td><input type="text" name="tmpConstellation"></td></tr></table>';
+    document.body.appendChild(sec);
+    return true;
+  })()`);
   await cdp.evaluate(`document.getElementById('__qf_overlay_host__').shadowRoot.querySelector('[data-act=fill]').click()`);
   const fillDone = await waitFillDone(40000);   // 字段扩到 80+ 后一轮填写要 ~10s，留足余量
   if (!fillDone) console.log('    ⚠ 等待填写完成超时（后台节流？），按当前状态断言');
@@ -156,6 +168,10 @@ function check(name, cond, extra) {
       englishLevel: g('englishLevel'), computerLevel: g('computerLevel'), selfEval: g('selfEval'),
       f1r: g('f1r'), f1n: g('f1n'), f1p: g('f1p'), f1c: g('f1c'),
       qq: g('qq'), hobby: g('hobby'), wx: g('wx'),
+      tmpInternReferrer: g('tmpInternReferrer'), tmpInternCompany: g('tmpInternCompany'),
+      tmpConstellationCls: (document.querySelector('[name=tmpConstellation]') || {}).className,
+      tmpConstellationTitle: (document.querySelector('[name=tmpConstellation]') || {}).title,
+      shudiCls: (document.querySelector('[name=shudi]') || {}).className,
       csMinzu: (document.querySelector('#cs-minzu input') || {}).value,
       csZzmm: (document.querySelector('#cs-zzmm .ant-select-selection-item') || {}).textContent,
       csCascader: (document.querySelector('#cs-jiguan input') || {}).value,
@@ -178,6 +194,14 @@ function check(name, cond, extra) {
   check('邮箱', vals.mail === 'zhangsan@example.com', vals.mail);
   check('籍贯', vals.jiguan === '山东济南', vals.jiguan);
   check('户口所在地', vals.hukouAddr === '山东济南', vals.hukouAddr);
+  check('「实习经历」区块内的证明人取实习记录（板块上下文）', vals.tmpInternReferrer === '李老师', vals.tmpInternReferrer);
+  check('「实习经历」区块内的实习单位取实习记录', vals.tmpInternCompany === '中国华能集团有限公司', vals.tmpInternCompany);
+  check('必填且为空的字段加红框标记（含未识别字段）',
+    /__qf_required/.test(vals.tmpConstellationCls || '') && /必填/.test(vals.tmpConstellationTitle || ''),
+    { cls: vals.tmpConstellationCls, title: vals.tmpConstellationTitle });
+  check('非必填的未识别字段不会被标成必填', !/__qf_required/.test(vals.shudiCls || ''), vals.shudiCls);
+  const progressText = await cdp.evaluate(`(() => { const s = document.getElementById('__qf_overlay_host__').shadowRoot; const d = s.querySelector('.qf-dialog'); return d ? d.textContent : ''; })()`);
+  check('完成提示里提醒必填项为空', /必填项为空/.test(progressText), progressText.slice(0, 140));
   check('身高', vals.height === '175', vals.height);
   check('申请职位', vals.applyJob === '综合管理岗', vals.applyJob);
   check('实习经历(textarea多条拼接)', vals.internship.includes('华能'), vals.internship.slice(0, 30));
@@ -246,6 +270,7 @@ function check(name, cond, extra) {
   await sleep(500);
   const cleared = await cdp.evaluate(`document.querySelectorAll('[class*=__qf_]').length`);
   check('高亮标记已清除', cleared === 0, cleared);
+  await cdp.evaluate(`(() => { const s = document.getElementById('__qf_tmp_scope__'); if (s) s.remove(); return true; })()`);
 
   cdp.close();
   console.log(`\n========== 结果: ${pass} 通过 / ${fail} 失败 ==========`);

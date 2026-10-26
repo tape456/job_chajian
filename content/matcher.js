@@ -5,6 +5,9 @@
   const FR = root.FieldRules;
 
   const SKIP_TYPES = new Set(['hidden', 'submit', 'button', 'reset', 'image', 'file', 'password', 'search']);
+  // 必填提示：星号（中英文）或「必填/必选」字样。只看该字段自己的信号文本，
+  // 不看整页文本——页面顶部「带 * 为必填项」的说明不会把全部字段带成必填。
+  const REQUIRED_HINT = /[*＊]|必填|必选/;
 
   function isVisible(el) {
     if (!el || !el.getClientRects().length) return false;
@@ -23,6 +26,29 @@
     // 明显属于站点导航/搜索区的字段
     if (el.closest('nav, [role="navigation"], [role="search"]')) return true;
     return false;
+  }
+
+  // 字段所属板块：从近到远找带板块语义的标题（h1-h6 / legend / caption / class 含 title），
+  // 用于消解「证明人姓名」「工作单位」这类在不同经历区块里含义不同的标签。
+  const TITLE_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LEGEND', 'CAPTION']);
+  function sectionScopeOf(el) {
+    const body = (el.ownerDocument || document).body;
+    let node = el;
+    let hops = 0;
+    while (node && node !== body && hops < 10) {
+      let sib = node.previousElementSibling;
+      let guard = 0;
+      while (sib && guard < 5) {
+        const isTitle = TITLE_TAGS.has(sib.tagName) || /(^|[-_ ])(title|header|heading)($|[-_ ])/i.test(String(sib.className || ''));
+        if (isTitle) {
+          const sc = FR.scopeOf(sib.textContent);
+          if (sc) return sc;
+        }
+        sib = sib.previousElementSibling; guard++;
+      }
+      node = node.parentElement; hops++;
+    }
+    return '';
   }
 
   // 采集单个字段的语义信号，按可靠度排序
@@ -136,6 +162,7 @@
         fields.push({
           kind: 'radio', group, el: group[0],
           signals: extractSignals(group[0]),
+          scope: sectionScopeOf(group[0]),
           options: group.map(r => ({ el: r, text: radioLabelText(r) }))
         });
         continue;
@@ -152,6 +179,7 @@
           kind: group.length > 1 ? 'checkboxGroup' : 'checkbox',
           group, el,
           signals: extractSignals(el),
+          scope: sectionScopeOf(el),
           options: group.map(c => ({ el: c, text: radioLabelText(c) }))
         });
         continue;
@@ -161,7 +189,7 @@
         : tag === 'textarea' ? 'textarea'
         : el.isContentEditable ? 'contenteditable'
         : 'input';
-      const f = { kind, el, signals: extractSignals(el) };
+      const f = { kind, el, signals: extractSignals(el), scope: sectionScopeOf(el) };
       if (kind === 'input') f.inputType = type; // text/date/month/tel/email/number...
       if (kind === 'select') {
         f.options = Array.from(el.options).map(o => ({ el: o, text: o.textContent.trim(), value: o.value }));
@@ -185,7 +213,8 @@
       fields.push({
         kind: isCascader ? 'cascader' : 'dropdown',
         el, trigger: el, multi: isMulti,
-        signals: extractSignals(el)
+        signals: extractSignals(el),
+        scope: sectionScopeOf(el)
       });
     }
 
@@ -197,9 +226,18 @@
           kind: hit.kind,
           el: hit.root,
           trigger: hit.root,
-          signals: extractSignals(hit.input || hit.root)
+          signals: extractSignals(hit.input || hit.root),
+          scope: sectionScopeOf(hit.root)
         });
       }
+    }
+
+    // 必填标记：原生 required / aria-required，或标签文本里的 * 与「必填」
+    for (const f of fields) {
+      const el = f.el;
+      f.required = !!(el.required
+        || (el.getAttribute && el.getAttribute('aria-required') === 'true')
+        || (f.signals || []).some(s => REQUIRED_HINT.test(s)));
     }
     return fields;
   }
@@ -247,7 +285,7 @@
         for (const sig of field.signals) {
           const m = FR.matchSignal(sig);
           if (m && m.paths && m.paths.length) {
-            const entry = FR.resolveValue(m.paths, entries);
+            const entry = FR.resolveValue(FR.preferScope(m.paths, field.scope), entries);
             if (entry) {
               hit = { ruleId: m.ruleId, path: entry.path, entry, confidence: m.confidence, signal: sig };
               break;

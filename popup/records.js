@@ -35,14 +35,28 @@
       p.textContent = '还没有记录。在职位页面点击悬浮球 →「记录职位」即可保存。';
       box.appendChild(p); return;
     }
+    const statuses = S.JOB_STATUS || [];
+    const statusOf = r => (statuses.some(s => s.key === r.status) ? r.status : 'applied');
     const t = document.createElement('table');
     t.className = 'rec-table';
-    t.innerHTML = '<thead><tr><th>时间</th><th>职位</th><th>链接</th><th>备注</th><th></th></tr></thead>';
+    t.innerHTML = '<thead><tr><th>更新时间</th><th>职位</th><th>状态</th><th>链接</th><th>备注</th><th></th></tr></thead>';
     const tb = document.createElement('tbody');
     for (const r of list) {
       const tr = document.createElement('tr');
-      const td1 = document.createElement('td'); td1.textContent = fmt(r.ts);
+      const td1 = document.createElement('td'); td1.textContent = fmt(r.updatedAt || r.ts);
       const td2 = document.createElement('td'); td2.textContent = r.title || '(未命名)';
+      const tdSt = document.createElement('td');
+      const sel = document.createElement('select');
+      sel.className = 'rec-status st-' + statusOf(r);
+      sel.title = '更新投递状态';
+      for (const s of statuses) {
+        const op = document.createElement('option');
+        op.value = s.key; op.textContent = s.label;
+        if (statusOf(r) === s.key) op.selected = true;
+        sel.appendChild(op);
+      }
+      sel.addEventListener('change', async () => { await S.updateJobRecord(r.id, { status: sel.value }); renderJobs(); });
+      tdSt.appendChild(sel);
       const td3 = document.createElement('td'); td3.className = 'url';
       if (r.url) { const a = document.createElement('a'); a.href = r.url; a.textContent = r.url; a.target = '_blank'; a.rel = 'noreferrer'; td3.appendChild(a); }
       const td4 = document.createElement('td'); td4.textContent = r.note || '';
@@ -50,7 +64,7 @@
       const del = document.createElement('span'); del.className = 'rec-del'; del.textContent = '删除';
       del.addEventListener('click', async () => { await S.deleteJobRecord(r.id); renderJobs(); });
       td5.appendChild(del);
-      tr.append(td1, td2, td3, td4, td5);
+      tr.append(td1, td2, tdSt, td3, td4, td5);
       tb.appendChild(tr);
     }
     t.appendChild(tb); box.appendChild(t);

@@ -106,12 +106,24 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
     s.querySelector('[data-act=record]').click();
     const d = s.querySelector('.qf-shade .qf-dialog');
     if (!d) return null;
-    return { title: d.querySelector('h3').textContent, url: d.querySelectorAll('input')[1].value, actions: [...d.querySelectorAll('.qf-dialog-actions .qf-btn')].map(b => b.textContent) };
+    const sel = d.querySelector('select');
+    return {
+      title: d.querySelector('h3').textContent,
+      url: d.querySelectorAll('input')[1].value,
+      statusOptions: sel ? [...sel.options].map(o => o.textContent) : [],
+      statusDefault: sel ? sel.value : '',
+      actions: [...d.querySelectorAll('.qf-dialog-actions .qf-btn')].map(b => b.textContent)
+    };
   })()`);
   check('记录职位弹窗出现且预填当前网址', recDlg && recDlg.url.includes('test-form.html'), recDlg && recDlg.url);
+  check('记录职位可选投递状态（默认已投递）',
+    recDlg && recDlg.statusOptions.join('|') === '已投递|笔试|面试|Offer|已结束' && recDlg.statusDefault === 'applied',
+    recDlg && { options: recDlg.statusOptions, def: recDlg.statusDefault });
   await cdp.evaluate(`(() => {
     const s = ${S};
     const d = s.querySelector('.qf-shade .qf-dialog');
+    const sel = d.querySelector('select');
+    if (sel) sel.value = 'interview';
     [...d.querySelectorAll('.qf-dialog-actions .qf-btn')].find(b => b.textContent.includes('保存')).click();
     return true;
   })()`);
@@ -128,9 +140,39 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
     await new Promise(r => setTimeout(r, 400));
     const d = s.querySelector('.qf-shade .qf-dialog.qf-jobs');
     if (!d) return null;
-    return { rows: d.querySelectorAll('.qf-job').length, first: (d.querySelector('.qf-job .ti') || {}).textContent || '' };
+    const sel = d.querySelector('.qf-job .st-sel');
+    return {
+      rows: d.querySelectorAll('.qf-job').length,
+      first: (d.querySelector('.qf-job .ti') || {}).textContent || '',
+      status: sel ? sel.value : '',
+      statusCls: sel ? sel.className : '',
+      chips: [...d.querySelectorAll('.qf-jobs-filter')].map(b => b.textContent),
+      sub: d.querySelector('.qf-sub').textContent
+    };
   })()`);
   check('管理投递列出刚保存的记录', jobsView && jobsView.rows >= 1 && /网上报名/.test(jobsView.first || ''), jobsView);
+  check('列表显示为「面试」状态并带对应配色',
+    jobsView && jobsView.status === 'interview' && /st-interview/.test(jobsView.statusCls),
+    jobsView && { status: jobsView.status, cls: jobsView.statusCls });
+  check('筛选条含「全部」与带计数的「面试」',
+    jobsView && jobsView.chips.some(t => /全部/.test(t)) && jobsView.chips.some(t => /面试/.test(t) && /1/.test(t)),
+    jobsView && jobsView.chips);
+  check('统计显示共 1 条、进行中 1 条',
+    jobsView && /共 1 条/.test(jobsView.sub) && /进行中 1 条/.test(jobsView.sub), jobsView && jobsView.sub);
+  const switched = await cdp.evaluate(`(async () => {
+    const s = ${S};
+    let d = s.querySelector('.qf-shade .qf-dialog.qf-jobs');
+    const sel = d.querySelector('.qf-job .st-sel');
+    sel.value = 'offer';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 500));
+    d = s.querySelector('.qf-shade .qf-dialog.qf-jobs');
+    const sel2 = d && d.querySelector('.qf-job .st-sel');
+    return { value: sel2 ? sel2.value : '', cls: sel2 ? sel2.className : '', sub: d ? d.querySelector('.qf-sub').textContent : '' };
+  })()`);
+  check('状态下拉改为 Offer 后即时生效并换配色',
+    switched.value === 'offer' && /st-offer/.test(switched.cls), switched);
+  check('Offer 不再计入进行中', /进行中 0 条/.test(switched.sub), switched.sub);
   // 清空历史脏记录，保证下一轮「1 条」这类断言可复现
   await cdp.evaluate(`(async () => {
     const s = ${S};
@@ -218,6 +260,8 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
   check('圈内 工作时间段 已填入', /2024/.test(regionVals.period || ''), regionVals.period);
   check('圈内字段绿色高亮', regionVals.cls.includes('__qf_filled'), regionVals.cls);
   check('圈外同名「工作单位」未被写入', regionVals.outside === '', regionVals.outside);
+  const shadeCount = await cdp.evaluate(`(() => ${S}.querySelectorAll('.qf-shade').length)()`);
+  check('选区填写结束后进度遮罩已销毁（不留隐藏层挡住后续弹窗）', shadeCount === 0, shadeCount);
 
   // ---------------- [3b] 教育经历选区：规则路径方言回归 + 只用所选记录 ----------------
   // 回归的 bug：fillRegion 发的是 education.*.school，规则写的是 education.0.school，
@@ -415,19 +459,94 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
     return { top: b.style.top, left: b.style.left, right: r.right, inner: document.documentElement.clientWidth, toast: s.querySelector('.qf-toast').textContent };
   })()`);
   check('双击复位回默认高度并提示', dbl.top === '' && dbl.left === '' && Math.abs(dbl.right - dbl.inner) < 2 && /右边框/.test(dbl.toast || ''), dbl);
+  // 面板方位：无论球被拖到哪一档高度，面板都开在球的上方，既不翻到下面也不压住球
+  const above = await cdp.evaluate(`(async () => {
+    const s = ${S};
+    const b = s.querySelector('.qf-ball');
+    const p = s.querySelector('.qf-panel');
+    const out = [];
+    for (const t of [788, 430, 180, 60]) {
+      b.style.top = t + 'px'; b.style.bottom = 'auto';
+      if (p.classList.contains('qf-hidden')) b.click();
+      window.dispatchEvent(new Event('resize'));
+      await new Promise(r => setTimeout(r, 450));
+      const br = b.getBoundingClientRect(), pr = p.getBoundingClientRect();
+      out.push({ set: t, ballTop: Math.round(br.top), panelTop: Math.round(pr.top), panelBottom: Math.round(pr.bottom), panelRight: Math.round(pr.right), panelH: Math.round(pr.height), compact: p.classList.contains('qf-compact') });
+    }
+    return { out, cw: document.documentElement.clientWidth, ch: document.documentElement.clientHeight, cursor: getComputedStyle(b).cursor };
+  })()`);
+  check('面板永远在悬浮球上方（不翻转、不压住球）', above.out.every(o => o.panelTop >= 0 && o.panelBottom <= o.ballTop + 2), above.out);
+  check('面板始终完整可见且不越过浏览器右边框', above.out.every(o => o.panelBottom <= above.ch && o.panelRight <= above.cw + 1), above.out);
+  check('悬浮球悬停指针为食指点击样式', above.cursor === 'pointer', above.cursor);
+  check('上方空间紧张时自动进入紧凑模式（收起 hero 宣传区）',
+    above.out[0].compact === false && above.out[1].compact === true && above.out[3].compact === true,
+    above.out.map(o => o.set + ':' + o.compact).join(' '));
+
+  const dragPanel = await cdp.evaluate(`(async () => {
+    const s = ${S};
+    const b = s.querySelector('.qf-ball');
+    const p = s.querySelector('.qf-panel');
+    b.style.top = '700px'; b.style.bottom = 'auto';
+    window.dispatchEvent(new Event('resize'));
+    if (p.classList.contains('qf-hidden')) b.click();
+    await new Promise(r => setTimeout(r, 400));
+    const before = !p.classList.contains('qf-hidden');
+    const r = b.getBoundingClientRect();
+    const mk = (t, x, y) => b.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 13 }));
+    mk('pointerdown', r.left + 20, r.top + 20); mk('pointermove', r.left + 20, r.top + 20 - 120);
+    const during = p.classList.contains('qf-hidden');
+    const iconDuring = b.querySelector('.icon').textContent;
+    mk('pointerup', r.left + 20, r.top + 20 - 120);
+    await new Promise(r => setTimeout(r, 350));
+    const after = !p.classList.contains('qf-hidden');
+    const iconAfter = b.querySelector('.icon').textContent;
+    const br = b.getBoundingClientRect(), pr = p.getBoundingClientRect();
+    return { before, during, after, iconDuring, iconAfter, ballTop: Math.round(br.top), panelBottom: Math.round(pr.bottom) };
+  })()`);
+  check('拖动悬浮球时面板临时收起，松手后重新开在球上方',
+    dragPanel.before && dragPanel.during && dragPanel.after && dragPanel.panelBottom <= dragPanel.ballTop + 2, dragPanel);
+  check('拖动中球的图标随面板收起/恢复同步切换',
+    /⚡/.test(dragPanel.iconDuring) && dragPanel.iconAfter === '\u00D7', dragPanel);
+
   const mini = await cdp.evaluate(`(async () => {
     const s = ${S};
-    if (s.querySelector('.qf-panel').classList.contains('qf-hidden')) s.querySelector('.qf-ball').click();
+    const b = s.querySelector('.qf-ball');
+    if (s.querySelector('.qf-panel').classList.contains('qf-hidden')) b.click();
+    await new Promise(r => setTimeout(r, 200));
+    const before = b.getBoundingClientRect();
     s.querySelector('[data-act=hideBall]').click();
-    await new Promise(r => setTimeout(r, 150));
-    const hiddenBall = s.querySelector('.qf-ball').classList.contains('qf-hidden');
-    const hasMini = !!s.querySelector('.qf-mini');
+    await new Promise(r => setTimeout(r, 250));
+    const hiddenBall = b.classList.contains('qf-hidden');
+    const m = s.querySelector('.qf-mini');
+    const mr = m && m.getBoundingClientRect();
     s.querySelector('.qf-mini').click();
-    await new Promise(r => setTimeout(r, 150));
-    return { hiddenBall, hasMini, back: !s.querySelector('.qf-ball').classList.contains('qf-hidden') };
+    await new Promise(r => setTimeout(r, 250));
+    const after = b.getBoundingClientRect();
+    return {
+      hiddenBall, hasMini: !!m,
+      ballCenter: Math.round(before.top + before.height / 2),
+      miniCenter: mr ? Math.round(mr.top + mr.height / 2) : null,
+      centerBefore: Math.round(before.top + before.height / 2), centerAfter: Math.round(after.top + after.height / 2),
+      back: !b.classList.contains('qf-hidden')
+    };
   })()`);
   check('「隐藏闪电悬浮按钮」隐藏球并出现边缘恢复入口', mini.hiddenBall && mini.hasMini, mini);
-  check('点击恢复入口后球重新显示', mini.back, mini);
+  check('边缘恢复把手出现在悬浮球原高度', mini.miniCenter !== null && Math.abs(mini.miniCenter - mini.ballCenter) < 3, mini);
+  check('点击恢复入口后球重新显示且高度不变', mini.back && Math.abs(mini.centerAfter - mini.centerBefore) < 2, mini);
+
+  const iconState = await cdp.evaluate(`(async () => {
+    const s = ${S};
+    const b = s.querySelector('.qf-ball'), p = s.querySelector('.qf-panel');
+    if (p.classList.contains('qf-hidden')) b.click();
+    await new Promise(r => setTimeout(r, 300));
+    const open = { icon: b.querySelector('.icon').textContent, aria: b.getAttribute('aria-expanded'), title: b.title };
+    b.click();
+    await new Promise(r => setTimeout(r, 400));
+    const closed = { icon: b.querySelector('.icon').textContent, aria: b.getAttribute('aria-expanded') };
+    return { open, closed };
+  })()`);
+  check('面板打开时球变成「×」提示可收起', iconState.open.icon === '\u00D7' && iconState.open.aria === 'true', iconState.open);
+  check('面板收起后球恢复闪电图标', /⚡/.test(iconState.closed.icon) && iconState.closed.aria === 'false', iconState.closed);
 
   // ---------------- [7] 常驻球：顶层永远有球，iframe 不再抢球 ----------------
   console.log('\n[7] 悬浮球常驻（顶层空壳页也必须有球，iframe 不再抢球）');

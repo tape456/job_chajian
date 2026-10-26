@@ -31,7 +31,7 @@
   let myFrameId = null;     // 由 background 回执（sender.frameId）
   let ballHiddenByUser = false;
   let aiWarned = false;      // AI 失败提示一次就够，别每轮都弹
-  let fillSummary = { count: 0, failed: 0 };
+  let fillSummary = { count: 0, failed: 0, requiredMissing: 0 };
 
   async function loadContext() {
     settings = await S.getSettings();
@@ -223,6 +223,7 @@
     const myToken = ++fillToken;
     const cancelled = () => myToken !== fillToken;
     const processed = new Set();
+    const failedEls = new Set();   // 填写失败的控件保留「失败」标记，不被必填提醒覆盖
     filling = true; startedAt = Date.now();
     if (showUi) {
       QuickFillOverlay.setBusy(true);
@@ -268,29 +269,39 @@
         done.forEach(r => {
           processed.add(r.match.field.el);
           count++;
-          if (r.ok !== true) { failed++; bumpReason(reasons, r.reason); }
+          if (r.ok !== true) { failed++; failedEls.add(r.match.field.el); bumpReason(reasons, r.reason); }
         });
         if (cancelled()) return;
         if (round < maxRounds && isTop) await new Promise(resolve => setTimeout(resolve, 180));
       }
       if (cancelled()) return;
+      // 必填项提醒：页面上标了 * / required 但最终仍为空的字段（含未识别）单独标红并在完成提示里计数
+      const requiredEmpty = (fields || []).filter(f => f.required && !fieldHasValue(f));
+      for (const f of requiredEmpty) {
+        if (!failedEls.has(f.el)) FieldFiller.markField(f, 'required', null);
+      }
+      const requiredMissing = requiredEmpty.length;
       fillDone = true;
       // 上报本帧结果（lead 帧据此汇总其他帧的完成情况）
-      try { chrome.runtime.sendMessage({ type: 'frame:fillDone', count, failed, leadId }).catch(() => {}); } catch (e) {}
+      try { chrome.runtime.sendMessage({ type: 'frame:fillDone', count, failed, requiredMissing, leadId }).catch(() => {}); } catch (e) {}
       if (showUi) {
+        const reqText = requiredMissing ? `，${requiredMissing} 个必填项为空（已红框标出）` : '';
         if (leadId !== null && !isTop) {
           QuickFillOverlay.completeProgress('✓ 简历填写完成',
-            `本区域已处理 ${count} 项，请检查页面中的填写结果。${failed ? whyText(reasons) : ''}`, 0);
+            `本区域已处理 ${count} 项${reqText}，请检查页面中的填写结果。${failed ? whyText(reasons) : ''}`, 0);
         } else if (leadId !== null) {
           await new Promise(resolve => setTimeout(resolve, 400));   // 等待其他帧上报
           const total = count + fillSummary.count, totalFailed = failed + fillSummary.failed;
-          fillSummary = { count: 0, failed: 0 };
+          const totalReq = requiredMissing + fillSummary.requiredMissing;
+          fillSummary = { count: 0, failed: 0, requiredMissing: 0 };
           const saved = Math.max(3, total * 4);
+          const reqSuffix = totalReq ? `已标出 ${totalReq} 个必填项为空，请重点核对。` : '';
           QuickFillOverlay.completeProgress('✓ 简历填写完成',
-            `为你节省约 ${saved} 秒，请检查页面中的填写结果。${totalFailed ? `（${totalFailed} 项需人工处理）` : ''}`, saved);
+            `为你节省约 ${saved} 秒，请检查页面中的填写结果。${totalFailed ? `（${totalFailed} 项需人工处理）` : ''}`
+            + (reqSuffix ? ' ' + reqSuffix : ''), saved);
         } else {
           QuickFillOverlay.completeProgress('✓ 简历填写完成',
-            `已处理 ${count} 项${failed ? `，${failed} 项需人工处理` + whyText(reasons) : ''}。请逐项核对后自行提交。`,
+            `已处理 ${count} 项${failed ? `，${failed} 项需人工处理` + whyText(reasons) : ''}${reqText}。请逐项核对后自行提交。`,
             Math.max(3, count * 4));
         }
       } else if (!isTop) {
@@ -419,30 +430,52 @@
     }
 
     const scope = '「' + sec.title + (sec.kind === 'array' ? '·第 ' + (index + 1) + ' 组' : '') + '」';
+    const myToken = ++fillToken;
+    const cancelled = () => myToken !== fillToken;
     filling = true; startedAt = Date.now();
     let res;
+    if (isTop && mounted) {
+      QuickFillOverlay.setBusy(true);
+      QuickFillOverlay.showProgress('填写选区', '正在把' + scope + '写入选中的控件。', 18, { phase: 'fill' });
+    }
     try {
       const { matched, noValue, unmatched } = FieldMatcher.matchFields(regionFields, regionEntries, learned, null);
       for (const nv of noValue) FieldFiller.markField(nv.field, 'missing', null);
       // 圈进来但跟所选记录无关的控件：灰虚线「不属于这一组」，不要再用橙红吓人
       for (const f of unmatched) FieldFiller.markField(f, 'skipped', null);
       res = { matched: matched.length, noValue: noValue.length, skipped: unmatched.length, ok: 0, other: 0, failed: 0, had: 0, reasons: {} };
+      let done = 0;
       for (const mm of matched) {
+        if (cancelled()) break;
         if (fieldHasValue(mm.field)) { res.had++; continue; }
         let r = { ok: false, reason: 'exception' };
-        try { r = await FieldFiller.fillMatch(mm, { label: mm.entry && mm.entry.label }); } catch (e) { /* 保持失败态 */ }
+        try { r = await FieldFiller.fillMatch(mm, { label: mm.entry && mm.entry.label, cancelled }); } catch (e) { /* 保持失败态 */ }
+        if (cancelled()) break;
         if (r.ok === true) { res.ok++; FieldFiller.markField(mm.field, 'filled', mm); }
         else if (r.ok === 'other') { res.other++; FieldFiller.markField(mm.field, 'filled-other', mm); }
         else {
           res.failed++;
           bumpReason(res.reasons, r.reason);
           FieldFiller.markField(mm.field, 'failed', mm, r.reason);
+          // 组件类失败把值放剪贴板，和「一键填写」的兜底保持一致
+          if (mm.field.kind === 'dropdown' || mm.field.kind === 'cascader') {
+            try { await navigator.clipboard.writeText(String(mm.entry.value)); } catch (e) {}
+          }
+        }
+        done++;
+        if (isTop && mounted) {
+          QuickFillOverlay.showProgress('填写选区',
+            '正在把' + scope + '写入选中的控件（' + done + '/' + matched.length + '）。',
+            18 + Math.round(70 * done / Math.max(1, matched.length)), { phase: 'fill' });
         }
       }
     } finally {
-      filling = false;
-      if (isTop && mounted) { QuickFillOverlay.setBusy(false); updateOverlay(); }
+      if (myToken === fillToken) {
+        filling = false;
+        if (isTop && mounted) { QuickFillOverlay.setBusy(false); QuickFillOverlay.closeProgress(); updateOverlay(); }
+      }
     }
+    if (cancelled()) return;
 
     // 反馈必须区分「没匹配到」「已有内容」「填好了」——以前一律报"完成"，用户无法判断发生了什么
     const total = res.matched + res.noValue + res.skipped;
@@ -654,6 +687,7 @@
       QuickFillOverlay.showJobsPanel(() => ResumeStore.getJobRecords(), {
         onDelete: id => ResumeStore.deleteJobRecord(id),
         onClear: () => ResumeStore.clearJobRecords(),
+        onUpdateStatus: (id, status) => ResumeStore.updateJobRecord(id, { status }),
         onExport: list => downloadJson('投递记录.json', list)
       });
     },
@@ -706,6 +740,7 @@
         case 'frame:fillSummary':
           fillSummary.count += msg.count || 0;
           fillSummary.failed += msg.failed || 0;
+          fillSummary.requiredMissing += msg.requiredMissing || 0;
           break;
         case 'forceShow': {
           ensureMounted();
