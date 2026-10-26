@@ -32,18 +32,19 @@
       outline: 2px solid var(--qf-brand-2); outline-offset: 2px; }
     .qf-hidden { display: none !important; }`;
   const BALL = `
-    .qf-ball { position: fixed; right: 22px; bottom: 78px; z-index: 2147483000;
-      width: 54px; height: 54px; border-radius: var(--qf-r-pill); display: grid; place-items: center;
+    /* 悬浮球吸附在浏览器右边框：横向锁死（right:0），只允许沿边框上下滑动 */
+    .qf-ball { position: fixed; right: 0; bottom: 78px; z-index: 2147483000;
+      width: 54px; height: 54px; border-radius: 27px 0 0 27px; display: grid; place-items: center;
       color: #fff; background: var(--qf-brand-grad); box-shadow: var(--qf-sp-ball);
-      border: 2px solid rgba(255,255,255,.72);
-      user-select: none; touch-action: none; cursor: grab;
+      border: 2px solid rgba(255,255,255,.72); border-right: none;
+      user-select: none; touch-action: none; cursor: ns-resize;
       transition: transform .18s var(--qf-ease), box-shadow .25s;
       animation: qf-pop-in .5s var(--qf-ease-spring); }
-    .qf-ball::before { content: ''; position: absolute; inset: -9px; border-radius: inherit; pointer-events: none;
+    .qf-ball::before { content: ''; position: absolute; inset: -9px -4px -9px -9px; border-radius: inherit; pointer-events: none;
       background: radial-gradient(circle, transparent 74%, rgba(21,101,255,.42) 80%, rgba(21,101,255,0) 96%);
       animation: qf-halo 3.4s ease-in-out infinite; }
-    .qf-ball:hover { transform: scale(1.07); box-shadow: 0 12px 30px rgba(21,101,255,.5); }
-    .qf-ball:not(.dragging):active { transform: scale(.92); cursor: grabbing; }
+    .qf-ball:hover { transform: translateX(-4px) scale(1.04); box-shadow: -10px 0 26px rgba(21,101,255,.5); }
+    .qf-ball:not(.dragging):active { transform: translateX(-4px) scale(.94); cursor: grabbing; }
     .qf-ball.dragging { transition: none; cursor: grabbing; }
     .qf-ball.dragging::before { animation-play-state: paused; }
     .qf-ball .icon { font-size: 24px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.28)); pointer-events: none; }
@@ -382,6 +383,7 @@
     const ball = node('div', 'qf-ball qf-hidden');
     ball.setAttribute('role', 'button');
     ball.setAttribute('aria-label', '打开网申速填助手');
+    ball.title = '点击打开助手｜可沿右边框上下拖动';
     ball.tabIndex = 0;
     ball.innerHTML = '<span class="icon">\u26A1\uFE0E</span>';
     shadow.appendChild(ball);
@@ -390,59 +392,63 @@
     restoreBallPos();
   }
 
-  function clampX(left, w) { return Math.max(4, Math.min(innerWidth - w - 4, left)); }
+  // 横向不给任何自由度（永远贴右边框），只纵向限位
   function clampY(top, h) { return Math.max(4, Math.min(innerHeight - h - 4, top)); }
 
-  function saveBallPos(left, top) {
-    if (!isFinite(left) || !isFinite(top)) return;
+  function saveBallTop(top) {
+    if (!isFinite(top)) return;
     clearTimeout(savePosTimer);
     savePosTimer = setTimeout(() => {
-      try { chrome.storage.local.set({ [POS_KEY]: { left, top, ts: Date.now() } }); } catch (e) {}
+      try { chrome.storage.local.set({ [POS_KEY]: { top, ts: Date.now() } }); } catch (e) {}
     }, 300);
   }
   function restoreBallPos() {
     try {
       chrome.storage.local.get(POS_KEY, res => {
         const p = res && res[POS_KEY];
-        if (!p || !ui.ball || !isFinite(p.left) || !isFinite(p.top)) return;
+        if (!p || !ui.ball || !isFinite(p.top)) return;
         const r = ui.ball.getBoundingClientRect();
-        const left = clampX(p.left, r.width || 48), top = clampY(p.top, r.height || 48);
-        Object.assign(ui.ball.style, { left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto' });
+        applyBallTop(clampY(p.top, r.height || 54));
       });
     } catch (e) {}
   }
+  function applyBallTop(top) {
+    if (!ui.ball) return;
+    ui.ball.style.top = top + 'px';
+    ui.ball.style.bottom = 'auto';
+  }
   function resetBallPos() {
     if (!ui.ball) return;
-    Object.assign(ui.ball.style, { left: '', top: '', right: '22px', bottom: '78px' });
+    Object.assign(ui.ball.style, { left: '', top: '', right: '', bottom: '' });
     try { chrome.storage.local.remove(POS_KEY); } catch (e) {}
-    toast('悬浮球已复位到右下角');
+    positionPanelNearBall();
+    toast('悬浮球已复位到右边框');
   }
 
   function initDrag(ball) {
     let lastDragEnd = 0;
     ball.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
-      dragState = { id: e.pointerId, x: e.clientX, y: e.clientY, rect: ball.getBoundingClientRect(), moved: false };
+      const r = ball.getBoundingClientRect();
+      dragState = { id: e.pointerId, y: e.clientY, top: r.top, h: r.height, moved: false };
       try { ball.setPointerCapture(e.pointerId); } catch (err) {}
     });
     ball.addEventListener('pointermove', e => {
       if (!dragState || dragState.id !== e.pointerId) return;
-      const dx = e.clientX - dragState.x, dy = e.clientY - dragState.y;
-      if (Math.abs(dx) + Math.abs(dy) > 6) {
+      const dy = e.clientY - dragState.y;
+      if (Math.abs(dy) > 6) {
         if (!dragState.moved) ball.classList.add('dragging');
         dragState.moved = true;
       }
       if (!dragState.moved) return;
-      const left = clampX(dragState.rect.left + dx, dragState.rect.width);
-      const top = clampY(dragState.rect.top + dy, dragState.rect.height);
-      Object.assign(ball.style, { left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto' });
+      applyBallTop(clampY(dragState.top + dy, dragState.h));
       positionPanelNearBall();
     });
     const end = () => {
       if (dragState && dragState.moved) {
         lastDragEnd = Date.now();
         ball.classList.remove('dragging');
-        saveBallPos(parseFloat(ui.ball.style.left), parseFloat(ui.ball.style.top));
+        saveBallTop(parseFloat(ball.style.top));
       }
       dragState = null;
     };
@@ -457,7 +463,17 @@
       if (show) handlers.onOpen?.();
     });
     ball.addEventListener('dblclick', resetBallPos);
-    ball.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ball.click(); } });
+    ball.addEventListener('keydown', e => { if (e.key === 'ArrowUp') { e.preventDefault(); nudgeBall(-40); } else if (e.key === 'ArrowDown') { e.preventDefault(); nudgeBall(40); } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ball.click(); } });
+  }
+
+  // 键盘微调：吸附态下唯一能改变位置的方式，供无鼠标/无障碍场景使用
+  function nudgeBall(delta) {
+    if (!ui.ball) return;
+    const r = ui.ball.getBoundingClientRect();
+    const top = clampY((ui.ball.style.top ? parseFloat(ui.ball.style.top) : r.top) + delta, r.height || 54);
+    applyBallTop(top);
+    saveBallTop(top);
+    positionPanelNearBall();
   }
 
   // ---------------- 面板 ----------------
@@ -652,7 +668,7 @@
     selectionCallback = callback;
     togglePanel(false);
     const mask = node('div', 'qf-select-mask');
-    mask.innerHTML = '<div class="qf-select-tip">拖动框选「一组」表单字段 · Esc 取消 · 起框请避开右下角悬浮球</div><div class="qf-selection qf-hidden"></div>';
+    mask.innerHTML = '<div class="qf-select-tip">拖动框选「一组」表单字段 · Esc 取消 · 起框请避开右侧边框上的悬浮球</div><div class="qf-selection qf-hidden"></div>';
     const box = mask.querySelector('.qf-selection');
     shadow.appendChild(mask); selectMask = mask;
     let start = null;
@@ -1011,15 +1027,19 @@
     },
     hideMini() { if (miniEl) miniEl.remove(); miniEl = null; ui.mini = null; },
     hideAllBalls() { api.hideBall(); api.hideMini(); },
-    // 视口变化后把球拉回可见范围（拖到边缘外 / 窗口缩小 / 页面缩放都会用到）
+    // 视口变化后把球拉回可视范围（球永远贴右边框，所以只需要纵向限位）
     reclampBall() {
       if (!ui.ball || ui.ball.classList.contains('qf-hidden')) return;
       const r = ui.ball.getBoundingClientRect();
-      const left = clampX(r.left, r.width || 48), top = clampY(r.top, r.height || 48);
-      if (Math.abs(left - r.left) < 1 && Math.abs(top - r.top) < 1) return;
-      Object.assign(ui.ball.style, { left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto' });
+      const top = clampY(r.top, r.height || 54);
+      const moved = Math.abs(top - r.top) >= 1;
+      ui.ball.style.left = '';       // 兜掉任何历史遗留的横向内联定位
+      ui.ball.style.right = '';      // 横向一律交回 CSS 的 right:0（吸附到右边框）
+      if (moved) {
+        applyBallTop(top);
+        saveBallTop(top);
+      }
       positionPanelNearBall();
-      saveBallPos(left, top);
     },
     setResumes(list, id) {
       if (!ui.resumeSelect) return;

@@ -30,8 +30,14 @@ async function connect(wsUrl) {
   await sleep(600);
 
   const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
+  // clip 是视口坐标：必须关掉 captureBeyondViewport，否则页面滚动过以后会截到别处的空白
   async function shot(name, clip) {
-    const r = await c.send('Page.captureScreenshot', Object.assign({ format: 'png' }, clip ? { clip: Object.assign({ scale: 1 }, clip) } : {}));
+    const params = { format: 'png' };
+    if (clip) {
+      params.clip = { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: 1 };
+      params.captureBeyondViewport = false;
+    }
+    const r = await c.send('Page.captureScreenshot', params);
     fs.writeFileSync('shots/' + name, Buffer.from(r.result.data, 'base64'));
     console.log('saved shots/' + name);
   }
@@ -41,8 +47,29 @@ async function connect(wsUrl) {
   await c.send('Page.reload', {});
   await sleep(2800);
 
-  // 1. 常驻球（默认右下角）
-  await shot('ui-1-ball.png', { x: 1080, y: 420, width: 336, height: 354 });
+  // 1. 常驻球（吸附在浏览器右边框，裁剪区按球的实际位置取）
+  async function shotBall(name) {
+    const bb = await c.ev(`(() => { const b = ${S}.querySelector('.qf-ball'); const r = b.getBoundingClientRect();
+      return { x: r.x, y: r.y, w: r.width, h: r.height, vw: document.documentElement.clientWidth, vh: document.documentElement.clientHeight }; })()`);
+    const CW = 340, CH = 360;
+    await shot(name, {
+      x: Math.max(0, Math.min(bb.x - 60, bb.vw - CW)),
+      y: Math.max(0, Math.min(bb.y + bb.h / 2 - CH / 2, bb.vh - CH)),
+      width: CW, height: CH
+    });
+    console.log('ball box', bb);
+  }
+  await shotBall('ui-1-ball.png');
+
+  // 1b. 沿右边框上下拖动后：仍然贴边，只是高度变了
+  await c.ev(`(() => { const b = ${S}.querySelector('.qf-ball'); const r = b.getBoundingClientRect();
+    const mk = (t, x, y) => b.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 7 }));
+    mk('pointerdown', r.left + 20, r.top + 20); mk('pointermove', r.left + 20 - 400, r.top + 20 - 300); mk('pointerup', r.left + 20 - 400, r.top + 20 - 300);
+    return 1; })()`);
+  await sleep(400);
+  await shotBall('ui-1b-ball-dragged.png');
+  await c.ev(`(() => { ${S}.querySelector('.qf-ball').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); return 1; })()`);
+  await sleep(300);
 
   // 2. 面板
   await c.ev(`(() => { const s = ${S}; s.querySelector('.qf-ball').click(); return 1; })()`);

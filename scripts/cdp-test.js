@@ -103,13 +103,14 @@ function check(name, cond, extra) {
       hasBadge: !!h.shadowRoot.querySelector('.badge'),
       bg: cs.backgroundImage,
       anim: cs.animationName,
+      halo: getComputedStyle(b, '::before').animationName,
       icon: (h.shadowRoot.querySelector('.qf-ball .icon') || {}).textContent || ''
     };
   })()`);
   check('悬浮球可见（识别为招聘表单）', ballState && !ballState.hidden, ballState);
   check('悬浮球为紫蓝渐变品牌球', ballState && /gradient/.test(ballState.bg), ballState && ballState.bg);
   check('悬浮球带闪电图标且无旧徽标', ballState && ballState.icon.includes('⚡') && !ballState.hasBadge, ballState && ballState.icon);
-  check('悬浮球有呼吸动画', ballState && /breathe/.test(ballState.anim), ballState && ballState.anim);
+  check('悬浮球有入场弹跳与呼吸光环动画', ballState && /pop-in/.test(ballState.anim) && /halo/.test(ballState.halo), ballState && ballState.anim + ' + ' + ballState.halo);
 
   console.log('\n[2] 打开面板并检查匹配统计');
   const clickRes = await cdp.evaluate(`(() => {

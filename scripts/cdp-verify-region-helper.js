@@ -1,4 +1,4 @@
-// CDP 验证：新面板 / 选区填写 / 辅助填写 / 记录职位 / 反馈 / 拖动记忆 / 自愈挂载 / iframe 出球
+// CDP 验证：新面板 / 选区填写 / 辅助填写 / 记录职位 / 反馈 / 右边框吸附与纵向记忆 / 自愈挂载 / iframe 出球
 // 用法: node scripts/cdp-verify-region-helper.js [调试端口，默认 9222]
 const PORT = process.argv[2] || '9222';
 const WS_URL_FETCH = 'http://127.0.0.1:' + PORT + '/json';
@@ -365,19 +365,23 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
   await cdp.evaluate(`(() => { const s = ${S}; const h = s.querySelector('.qf-helper'); if (h) h.querySelector('.qf-helper-head button').click(); return true; })()`);
   await sleep(200);
 
-  // ---------------- [6] 拖动记忆 + 自愈挂载 ----------------
-  console.log('\n[6] 拖动位置记忆 + 宿主自愈');
+  // ---------------- [6] 右边框吸附 + 纵向位置记忆 + 自愈挂载 ----------------
+  console.log('\n[6] 悬浮球吸附右边框（横向锁死）+ 纵向位置记忆 + 宿主自愈');
   const drag = await cdp.evaluate(`(() => {
     const s = ${S};
     const b = s.querySelector('.qf-ball');
     const r = b.getBoundingClientRect();
     const mk = (t, x, y) => b.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 9 }));
     mk('pointerdown', r.left + 20, r.top + 20);
-    mk('pointermove', r.left + 20 - 160, r.top + 20 - 120);
-    mk('pointerup', r.left + 20 - 160, r.top + 20 - 120);
-    return { left: b.style.left, top: b.style.top };
+    mk('pointermove', r.left + 20 + 260, r.top + 20 - 140);
+    mk('pointerup', r.left + 20 + 260, r.top + 20 - 140);
+    const n = b.getBoundingClientRect();
+    return { top: b.style.top, left: b.style.left, bottom: b.style.bottom, right: n.right, inner: document.documentElement.clientWidth, beforeTop: r.top };
   })()`);
-  check('拖动后球位置已改变（内联定位）', !!drag.left && !!drag.top, drag);
+  const px = v => parseFloat(v) || 0;
+  check('纵向拖动生效（球沿右边框上移 140px）', !!drag.top && Math.abs((drag.beforeTop - 140) - px(drag.top)) < 12, drag);
+  check('横向锁死：向左拽 260px 后球仍贴浏览器右边框', Math.abs(drag.right - drag.inner) < 2, { right: drag.right, inner: drag.inner });
+  check('不再写横向内联定位（吸附态只保留纵向）', drag.left === '' && drag.bottom === 'auto', drag);
   await sleep(600);   // 等位置持久化（防抖 300ms）
   const heal = await cdp.evaluate(`(async () => {
     document.getElementById('__qf_overlay_host__').remove();
@@ -385,12 +389,32 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
     const h = document.getElementById('__qf_overlay_host__');
     const s = h && h.shadowRoot;
     const b = s && s.querySelector('.qf-ball');
-    return { restored: !!h, ball: !!b, left: b ? b.style.left : '', top: b ? b.style.top : '' };
+    const r = b && b.getBoundingClientRect();
+    return { restored: !!h, ball: !!b, top: b ? b.style.top : '', left: b ? b.style.left : '', right: r ? r.right : 0, inner: document.documentElement.clientWidth };
   })()`);
   check('宿主被移除后自动重建（自愈）', heal.restored && heal.ball, heal);
-  const px = v => parseFloat(v) || 0;
-  check('重建后恢复拖动位置', Math.abs(px(heal.left) - px(drag.left)) < 8 && Math.abs(px(heal.top) - px(drag.top)) < 8,
-    { before: drag, after: { left: heal.left, top: heal.top } });
+  check('重建后恢复纵向位置且仍贴右边框', Math.abs(px(heal.top) - px(drag.top)) < 8 && Math.abs(heal.right - heal.inner) < 2,
+    { before: drag, after: { top: heal.top, right: heal.right, inner: heal.inner } });
+  const snap = await cdp.evaluate(`(() => {
+    const s = ${S};
+    const b = s.querySelector('.qf-ball');
+    const r = b.getBoundingClientRect();
+    const mk = (t, x, y) => b.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 11 }));
+    mk('pointerdown', r.left + 20, r.top + 20);
+    mk('pointermove', r.left + 20 - 180, r.top + 20);
+    mk('pointerup', r.left + 20 - 180, r.top + 20);
+    const n = b.getBoundingClientRect();
+    return { top: b.style.top, right: n.right, inner: document.documentElement.clientWidth, beforeTop: r.top };
+  })()`);
+  check('纯横向拖动不移动球（上下左右乱拽已关闭）', Math.abs(snap.right - snap.inner) < 2 && Math.abs(px(snap.top) - px(snap.beforeTop)) < 2, snap);
+  const dbl = await cdp.evaluate(`(() => {
+    const s = ${S};
+    const b = s.querySelector('.qf-ball');
+    b.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+    const r = b.getBoundingClientRect();
+    return { top: b.style.top, left: b.style.left, right: r.right, inner: document.documentElement.clientWidth, toast: s.querySelector('.qf-toast').textContent };
+  })()`);
+  check('双击复位回默认高度并提示', dbl.top === '' && dbl.left === '' && Math.abs(dbl.right - dbl.inner) < 2 && /右边框/.test(dbl.toast || ''), dbl);
   const mini = await cdp.evaluate(`(async () => {
     const s = ${S};
     if (s.querySelector('.qf-panel').classList.contains('qf-hidden')) s.querySelector('.qf-ball').click();
@@ -444,9 +468,11 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
     window.dispatchEvent(new Event('resize'));
     await new Promise(r => setTimeout(r, 500));
     const r = b.getBoundingClientRect();
-    return { left: Math.round(r.left), top: Math.round(r.top), inView: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight };
+    const cw = document.documentElement.clientWidth;
+    return { left: Math.round(r.left), top: Math.round(r.top), inView: r.width > 0 && r.left >= 0 && r.top >= 0 && r.right <= cw, docked: Math.abs(r.right - cw) < 2, inlineLeft: b.style.left };
   })()`);
   check('窗口变化后越界的球会被拉回可视区', shrunk.inView, shrunk);
+  check('拉回后仍吸附在浏览器右边框（横向内联定位已清除）', shrunk.docked && shrunk.inlineLeft === '', shrunk);
 
   cdp.close();
   console.log(`\n========== 结果: ${pass} 通过 / ${fail} 失败 ==========`);
