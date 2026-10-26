@@ -1,4 +1,6 @@
 // matchSignal 短信号误匹配修复的单元测试（Node 环境）
+const fs = require('fs');
+const path = require('path');
 global.self = global;
 require('../lib/rules.js');
 const FR = global.self.FieldRules;
