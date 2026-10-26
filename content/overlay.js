@@ -7,6 +7,8 @@
   if (root.QuickFillOverlay) return;
 
   // ---------------- 设计令牌与样式（视觉基准：cv.playoffer.cn 来个简历闪填） ----------------
+  // SYNC-FROM popup/tokens.css：Shadow DOM 用不了 <link>，这里是同一套值的拷贝，改一处要同步另一处。
+  // scripts/test-rules.js 有断言比对两边同名色值，漂了会直接红。
   const TOKENS = `
     :host { all: initial;
       --qf-brand:#1565FF; --qf-brand-2:#4A8DFF; --qf-brand-deep:#0F52D9;
@@ -18,11 +20,12 @@
       --qf-glass: rgba(255,255,255,.78); --qf-glass-tint: rgba(239,245,255,.34);
       --qf-r-lg:18px; --qf-r-md:12px; --qf-r-sm:9px; --qf-r-pill:999px;
       --qf-sp-panel:0 18px 44px rgba(11,27,51,.16), 0 2px 6px rgba(11,27,51,.06);
+      --qf-sp-card:0 1px 3px rgba(11,27,51,.06);
+      --qf-sp-card-hover:0 6px 18px rgba(11,27,51,.10);
       --qf-sp-ball:0 10px 26px rgba(21,101,255,.42);
       --qf-warn:#D97706; --qf-bad:#DC2626;
       --qf-ease: cubic-bezier(.22,.61,.36,1);
       --qf-ease-spring: cubic-bezier(.34,1.56,.64,1);
-      --qf-dur: 200ms;
     }`;
   const BASE = `
     * { box-sizing: border-box; font-family: "PingFang SC", "SF Pro Text", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif; }

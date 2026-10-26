@@ -1,0 +1,104 @@
+/* ========== 设计令牌（全站共用） ==========
+   与 content/overlay.js 的 TOKENS 段是同一套值：Shadow DOM 里的样式是内联 <style>，
+   用不了 <link>，所以那边留了一份拷贝。改一处必须同步另一处，
+   scripts/test-rules.js 有断言会比对两边同名色值。
+   视觉基准：cv.playoffer.cn（来个简历闪填）。 */
+:root {
+  /* 品牌 */
+  --qf-brand: #1565FF;
+  --qf-brand-2: #4A8DFF;
+  --qf-brand-deep: #0F52D9;
+  --qf-brand-grad: linear-gradient(135deg, #1565FF, #4A8DFF);
+  --qf-ok: #16A34A;
+  --qf-ok-2: #22C55E;
+  --qf-ok-grad: linear-gradient(90deg, #1565FF, #22C55E);
+  /* 中性色 */
+  --qf-t1: #0B1B33;
+  --qf-t2: #475569;
+  --qf-t3: #94A3B8;
+  --qf-bg: #F7FAFF;
+  --qf-bg-soft: #EFF5FF;
+  --qf-border: #E3EBF7;
+  --qf-border-2: #CFE0FA;
+  /* 状态色 */
+  --qf-warn: #D97706;
+  --qf-bad: #DC2626;
+  --qf-warn-soft: #FFF7E9;
+  --qf-bad-soft: #FDEEEE;
+  --qf-ok-soft: #E9F8EF;
+  /* 圆角 */
+  --qf-r-lg: 18px;
+  --qf-r-md: 12px;
+  --qf-r-sm: 9px;
+  --qf-r-pill: 999px;
+  /* 阴影 */
+  --qf-sp-panel: 0 18px 44px rgba(11, 27, 51, .16), 0 2px 6px rgba(11, 27, 51, .06);
+  --qf-sp-card: 0 1px 3px rgba(11, 27, 51, .06);
+  --qf-sp-card-hover: 0 6px 18px rgba(11, 27, 51, .10);
+  --qf-sp-ball: 0 10px 26px rgba(21, 101, 255, .42);
+  /* 缓动：--qf-ease 用于常规过渡，--qf-ease-spring 用于落定/弹跳 */
+  --qf-ease: cubic-bezier(.22, .61, .36, 1);
+  --qf-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* ---- 旧变量名映射：editor.css / popup.css 里的 var(--primary) 等一律走这套值 ---- */
+  --bg: var(--qf-bg);
+  --bg-2: #F1F6FE;
+  --card: #ffffff;
+  --line: var(--qf-border);
+  --text: var(--qf-t1);
+  --text-2: var(--qf-t2);
+  --text-3: var(--qf-t3);
+  --primary: var(--qf-brand);
+  --primary-2: var(--qf-brand-2);
+  --primary-deep: var(--qf-brand-deep);
+  --primary-soft: var(--qf-bg-soft);
+  --green: var(--qf-ok);
+  --green-2: var(--qf-ok-2);
+  --green-soft: var(--qf-ok-soft);
+  --amber: var(--qf-warn);
+  --amber-soft: var(--qf-warn-soft);
+  --red: var(--qf-bad);
+  --red-soft: var(--qf-bad-soft);
+  --radius: var(--qf-r-md);
+  --shadow: var(--qf-sp-card);
+  --ease: var(--qf-ease);
+  --ease-spring: var(--qf-ease-spring);
+}
+
+/* 底纹：扩展页顶部用与悬浮球一致的径向渐变，替代纯色块，避免「页面内」和「页面外」两套气质 */
+.tk-hero-bg {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(21, 101, 255, .10), rgba(255, 255, 255, 0) 62%),
+    var(--card);
+}
+
+/* 卡片悬停：只动 translateY 与阴影，不动宽高（120ms 内完成，避免拖慢扫读） */
+.tk-lift {
+  transition: transform .12s var(--ease), box-shadow .2s var(--ease), border-color .15s var(--ease);
+}
+.tk-lift:hover { transform: translateY(-1px); box-shadow: var(--qf-sp-card-hover); }
+.tk-lift:active { transform: translateY(0) scale(.99); }
+
+/* 一次性入场：供解析逐行揭示、弹窗等复用 */
+@keyframes tk-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes tk-spin { to { transform: rotate(360deg); } }
+.tk-in { animation: tk-rise .22s var(--ease) both; }
+
+/* 主按钮扫光：只在悬停时扫一次（不循环），静止时光带完全不可见，长时间停在页面上不会干扰阅读 */
+.btn.primary { position: relative; overflow: hidden; }
+.btn.primary::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(100deg, transparent 32%, rgba(255, 255, 255, .5) 50%, transparent 68%);
+  transform: translateX(-105%);
+}
+.btn.primary:hover::after { animation: tk-sweep .62s var(--ease) 1; }
+@keyframes tk-sweep { from { opacity: 1; transform: translateX(-105%); } to { opacity: 1; transform: translateX(105%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .tk-lift:hover { transform: none; }
+}

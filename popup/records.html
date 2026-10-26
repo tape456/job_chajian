@@ -3,18 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <title>本地记录 - 央国企网申速填</title>
+  <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="popup.css">
   <style>
     body { width: auto; min-width: 520px; max-width: 860px; margin: 0 auto; }
     .rec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .rec-table th, .rec-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #e9eef7; vertical-align: top; }
-    .rec-table th { color: #70829d; font-weight: 600; background: #f7faff; }
+    .rec-table th, .rec-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .rec-table th { color: #70829d; font-weight: 600; background: var(--qf-bg); }
+    /* 行底色只动 background，120ms 内完成，扫读长列表时不产生拖影 */
+    .rec-table tbody tr { transition: background .12s var(--ease); }
+    .rec-table tbody tr:hover { background: var(--qf-bg-soft); }
     .rec-table td.url { color: #64748b; word-break: break-all; max-width: 260px; }
     .rec-actions { display: flex; gap: 8px; margin: 10px 0 14px; }
-    .rec-empty { color: #8995a7; padding: 14px; text-align: center; font-size: 12px; }
-    .rec-del { color: #c0392b; cursor: pointer; }
-    .rec-status { font-size: 11px; padding: 2px 4px; border-radius: 999px;
-      border: 1px solid #dbe4f2; background: #fff; color: #334155; cursor: pointer; }
+    .rec-empty { color: var(--text-3); padding: 14px; text-align: center; font-size: 12px; }
+    .rec-del { color: #c0392b; cursor: pointer; transition: color .12s var(--ease), transform .12s var(--ease); }
+    .rec-del:hover { color: var(--red); transform: scale(1.08); }
+    /* 状态胶囊与页面内「投递看板」（overlay.js 的 .qf-job .st-sel）用同一套配色与交互反馈 */
+    .rec-status { font-size: 11px; padding: 2px 6px; border-radius: var(--qf-r-pill);
+      border: 1px solid #dbe4f2; background: #fff; color: #334155; cursor: pointer;
+      transition: border-color .15s var(--ease), transform .12s var(--ease); }
+    .rec-status:hover { border-color: var(--qf-border-2); }
+    .rec-status:active { transform: scale(.97); }
     .rec-status.st-offer { color: #15803d; border-color: #c7f0d8; background: #ecfdf3; }
     .rec-status.st-interview { color: #7c3aed; border-color: #e0d4ff; background: #f5f0ff; }
     .rec-status.st-written { color: #b45309; border-color: #ffe0a6; background: #fff7e8; }
