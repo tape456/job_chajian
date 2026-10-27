@@ -33,7 +33,14 @@
     button { cursor: pointer; border: none; background: none; color: inherit; }
     button:focus-visible, .qf-chip:focus-visible, .qf-select:focus-visible, input:focus-visible, textarea:focus-visible {
       outline: 2px solid var(--qf-brand-2); outline-offset: 2px; }
-    .qf-hidden { display: none !important; }`;
+    .qf-hidden { display: none !important; }
+    /* 设置里关掉「交互动效」时：只撤掉动画与过渡，颜色与描边一律保留，信息量不减 */
+    :host(.qf-still) *, :host(.qf-still) *::before, :host(.qf-still) *::after {
+      animation: none !important; transition: none !important; }
+    :host(.qf-still) .qf-progress-fill::after, :host(.qf-still) .qf-steps .on::after,
+    :host(.qf-still) .qf-progress-symbol::after, :host(.qf-still) .qf-btn.is-loading::after { display: none; }
+    /* 进度窗可聚焦（Esc/Tab 需要），但它不是输入控件，不要画默认焦点环 */
+    .qf-dialog[tabindex="-1"]:focus { outline: none; }`;
   const BALL = `
     /* 悬浮球吸附在浏览器右边框：横向锁死（right:0），只允许沿边框上下滑动 */
     .qf-ball { position: fixed; right: 0; bottom: 78px; z-index: 2147483000;
@@ -51,8 +58,18 @@
     .qf-ball.dragging { transition: none; cursor: grabbing; }
     .qf-ball.dragging::before { animation-play-state: paused; }
     .qf-ball .icon { font-size: 24px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.28)); pointer-events: none; }
+    /* 结算提示时只弹图标，不动球本身（球的 animationName 有测试断言） */
+    .qf-ball.is-ok .icon, .qf-ball.is-warn .icon { animation: qf-num .42s var(--qf-ease-spring) 1; }
     @keyframes qf-pop-in { from { opacity: 0; transform: scale(.3); } 70% { opacity: 1; transform: scale(1.08); } to { transform: scale(1); } }
     @keyframes qf-halo { 0%,100% { opacity: .35; transform: scale(1); } 50% { opacity: .9; transform: scale(1.07); } }
+    /* 光晕随状态变速换色：只动 animation-duration 与渐变色（paint），绝不动 transform/scale，
+       否则球的贴边坐标会变（region-helper 有 right 与 clientWidth 的贴边断言）。 */
+    .qf-ball.is-busy::before { animation-duration: 1.15s; opacity: 1;
+      background: radial-gradient(circle, transparent 72%, rgba(21,101,255,.62) 79%, rgba(21,101,255,0) 96%); }
+    .qf-ball.is-warn::before { animation-duration: 1.6s;
+      background: radial-gradient(circle, transparent 72%, rgba(217,119,6,.60) 79%, rgba(217,119,6,0) 96%); }
+    .qf-ball.is-ok::before { animation-duration: 1.6s;
+      background: radial-gradient(circle, transparent 72%, rgba(22,163,74,.58) 79%, rgba(22,163,74,0) 96%); }
     .qf-mini { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 2147483000;
       width: 28px; height: 54px; border-radius: var(--qf-r-pill) 0 0 var(--qf-r-pill); background: var(--qf-brand-grad); color: #fff;
       display: grid; place-items: center; font-size: 15px; cursor: pointer; opacity: .92;
@@ -103,7 +120,7 @@
       transition: background .15s, box-shadow .2s, transform .12s var(--qf-ease); }
     .qf-btn:hover { background: var(--qf-bg-soft); }
     .qf-btn:active { transform: scale(.96); }
-    .qf-btn.primary { color: #fff; background: var(--qf-brand-grad); border-color: transparent;
+    .qf-btn.primary { position: relative; overflow: hidden; color: #fff; background: var(--qf-brand-grad); border-color: transparent;
       box-shadow: 0 8px 20px rgba(21,101,255,.26); }
     .qf-btn.primary:hover { background: linear-gradient(135deg, var(--qf-brand-deep), var(--qf-brand));
       transform: translateY(-1px); box-shadow: 0 10px 24px rgba(21,101,255,.32); }
@@ -115,12 +132,8 @@
     .qf-btn.danger { color: var(--qf-bad); border-color: #FBD5D0; background: #FFF5F4; box-shadow: none; }
     .qf-btn.danger:hover { background: #ffeae7; }
     .qf-btn:disabled { opacity: .55; cursor: wait; }
+    /* 忙态不再放转圈（那是第三个循环动画），改由同一条扫光带表达「进行中」 */
     .qf-btn.is-loading { pointer-events: none; }
-    .qf-btn.is-loading::before { content: ''; width: 12px; height: 12px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,.45); border-top-color: #fff;
-      display: inline-block; margin-right: 7px; vertical-align: -2px;
-      animation: qf-spin .7s linear infinite; }
-    @keyframes qf-spin { to { transform: rotate(360deg); } }
     .qf-main-actions .qf-btn { width: 100%; font-size: 13px; padding: 11px; }
     .qf-main-actions .qf-btn .sub { display: block; font-size: 10px; font-weight: 400; opacity: .82; }
     .qf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
@@ -157,7 +170,7 @@
     .qf-list .val { margin-left: auto; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b98aa; }
     .qf-list .more, .qf-empty { text-align: center; color: #8995a7; padding: 6px; font-size: 11px; }
     .qf-ai-tag { font-size: 10px; color: #6545d4; }
-    .qf-tool-card { display: flex; align-items: center; gap: 8px; border: 1px solid var(--qf-border-2);
+    .qf-tool-card { position: relative; overflow: hidden; display: flex; align-items: center; gap: 8px; border: 1px solid var(--qf-border-2);
       border-radius: var(--qf-r-pill); padding: 9px 12px; background: #fff; cursor: pointer; text-align: left; width: 100%;
       transition: background .15s, border-color .15s, transform .12s var(--qf-ease); }
     .qf-tool-card:hover { background: var(--qf-bg-soft); }
@@ -176,7 +189,10 @@
     .qf-select-tip { position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
       max-width: calc(100vw - 24px); padding: 9px 18px; border-radius: 999px; color: #fff; font-size: 12.5px;
       background: linear-gradient(135deg, #1565FF, #4A8DFF); box-shadow: 0 8px 24px rgba(21,101,255,.36);
-      pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      animation: qf-tip-in .22s var(--qf-ease) both; }
+    /* 提示条本身靠 translateX(-50%) 居中，入场动画必须把这个位移带在关键帧里，否则会横向跳一下 */
+    @keyframes qf-tip-in { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } }
     .qf-selection { position: fixed; border: 2px dashed #1565FF; border-radius: 8px;
       background: rgba(21,101,255,.10); box-shadow: 0 0 0 9999px rgba(9,26,58,.06); pointer-events: none; }`;
   const DIALOG = `
@@ -189,7 +205,7 @@
     @keyframes qf-fade { from { opacity: 0; } }
     @keyframes qf-rise { from { opacity: 0; transform: translateY(14px) scale(.98); } }
     .qf-dialog h3 { margin: 0 0 4px; text-align: center; font-size: 16px; }
-    .qf-dialog .qf-sub { text-align: center; color: var(--qf-t3); font-size: 11.5px; margin: 0 0 12px; }
+    .qf-dialog .qf-sub { text-align: center; color: var(--qf-t3); font-size: 11.5px; margin: 0 0 12px; min-height: 2.4em; line-height: 1.2; }
     .qf-dialog p { line-height: 1.6; margin: 7px 0; color: var(--qf-t2); }
     .qf-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
     .qf-dialog-actions .qf-btn { min-width: 84px; }
@@ -223,28 +239,54 @@
     .qf-warn-bar { margin-top: 9px; padding: 8px 10px; background: #fff7e8; border: 1px solid #ffe0a6;
       color: #8a5a10; border-radius: var(--qf-r-sm); font-size: 11.5px; line-height: 1.5; }`;
   const PROGRESS = `
-    .qf-progress-symbol { width: 54px; height: 54px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
+    .qf-progress-symbol { position: relative; overflow: hidden; width: 54px; height: 54px; margin: 0 auto; border-radius: 50%;
+      display: grid; place-items: center;
       background: var(--qf-brand-grad); color: #fff; font-size: 24px; box-shadow: 0 10px 24px rgba(21,101,255,.32); }
     .qf-progress-symbol .lens { font-size: 15px; margin-left: -3px; }
-    .qf-dialog.is-busy .qf-progress-symbol { animation: qf-pulse 1.6s ease-in-out infinite; }
-    @keyframes qf-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
     .qf-progress-track { height: 8px; border-radius: var(--qf-r-pill); background: #EAF0FA; overflow: hidden; margin: 16px 0 10px; }
     .qf-progress-fill { height: 100%; width: 4%; border-radius: var(--qf-r-pill); position: relative; overflow: hidden;
-      background: var(--qf-ok-grad); transition: width .3s ease; }
-    .qf-dialog.is-busy .qf-progress-fill::after { content: ''; position: absolute; inset: 0;
-      background: linear-gradient(100deg, transparent 32%, rgba(255,255,255,.55) 50%, transparent 68%);
-      transform: translateX(-100%); animation: qf-shimmer 1.2s ease-in-out infinite; }
-    @keyframes qf-shimmer { to { transform: translateX(100%); } }
+      background: var(--qf-ok-grad); transition: width .3s var(--qf-ease); }
     .qf-steps { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--qf-t3); }
-    .qf-steps span { flex: 1; text-align: center; padding: 5px 2px; border-radius: var(--qf-r-pill);
-      background: #F3F7FE; border: 1px solid var(--qf-border); transition: all .2s; }
+    .qf-steps span { position: relative; overflow: hidden; flex: 1; text-align: center; padding: 5px 2px; border-radius: var(--qf-r-pill);
+      background: #F3F7FE; border: 1px solid var(--qf-border);
+      transition: color .18s var(--qf-ease), background .18s var(--qf-ease), box-shadow .22s var(--qf-ease), border-color .18s var(--qf-ease); }
     .qf-steps .on { color: #fff; font-weight: 700; background: var(--qf-brand-grad); border-color: transparent;
       box-shadow: 0 6px 14px rgba(21,101,255,.26); }
     .qf-steps .done { color: var(--qf-ok); background: #ECFDF3; border-color: #cdeeda; }
+    /* 完成的阶段补一个勾，让「已经过了这一步」是看得见的，而不只是换了颜色 */
+    .qf-steps .done::before { content: '\\2713'; display: inline-block; margin-right: 2px; font-weight: 700;
+      animation: qf-num .3s var(--qf-ease-spring) 1; }
     .qf-progress-count { text-align: center; font-weight: 700; color: var(--qf-brand); margin: 10px 0 0; min-height: 1em; font-size: 13px; }
-    .qf-progress-comment { text-align: center; color: var(--qf-t3); font-size: 11px; margin: 8px 0 0; }
+    .qf-progress-time { text-align: center; color: var(--qf-t2); font-size: 11px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+    .qf-progress-other { text-align: center; color: var(--qf-brand); font-size: 11px; margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+    .qf-progress-comment { text-align: center; color: var(--qf-t3); font-size: 11px; margin: 8px 0 0; min-height: 2.6em; line-height: 1.3; }
     .qf-done-ask { text-align: center; color: var(--qf-t2); margin: 14px 0 0; }
-    .qf-done-ask .qf-btn { padding: 6px 16px; margin: 0 4px; display: inline-flex; }`;
+    .qf-done-ask .qf-btn { padding: 6px 16px; margin: 0 4px; display: inline-flex; }
+    /* 文案换行时不跳版：只在切换瞬间做一次 3px 位移淡入 */
+    .qf-swap { animation: qf-swap .22s var(--qf-ease) both; }
+    @keyframes qf-swap { from { opacity: 0; transform: translateY(3px); } }
+    /* 两段式取消：第一下只「上膛」，按钮变实红并问一次确认，3 秒不点就自己松开 */
+    .qf-btn.danger.is-armed { background: var(--qf-bad); border-color: var(--qf-bad); color: #fff;
+      box-shadow: 0 6px 16px rgba(220,38,38,.30); animation: qf-num .32s var(--qf-ease-spring); }
+    .qf-dialog.is-cancelled .qf-progress-symbol { background: linear-gradient(135deg, #64748B, #94A3B8); box-shadow: 0 10px 24px rgba(100,116,139,.30); }
+    .qf-cancel-stat { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin: 12px 0 2px; }
+    .qf-cancel-stat div { text-align: center; background: #F7FAFF; border: 1px solid var(--qf-border); border-radius: var(--qf-r-md); padding: 7px 4px; }
+    .qf-cancel-stat b { display: block; font-size: 15px; color: var(--qf-t1); font-variant-numeric: tabular-nums; }
+    .qf-cancel-stat span { font-size: 10px; color: var(--qf-t3); }`;
+  // 扫光：全局唯一的「进行中」光带（原先进度条的 qf-shimmer、按钮的 qf-spin、图标的 qf-pulse 三套循环合并成这一套）
+  const SWEEP = `
+    .qf-progress-fill::after, .qf-steps .on::after, .qf-progress-symbol::after,
+    .qf-btn.is-loading::after, .qf-tool-card::after, .qf-btn.primary::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: linear-gradient(100deg, transparent 32%, rgba(255,255,255,.55) 50%, transparent 68%);
+      transform: translateX(-105%); }
+    /* 忙态：光带持续扫（进度条 / 当前阶段胶囊 / 进度图标 / 填写中按钮） */
+    .qf-dialog.is-busy .qf-progress-fill::after, .qf-dialog.is-busy .qf-steps .on::after,
+    .qf-dialog.is-busy .qf-progress-symbol::after, .qf-btn.is-loading::after {
+      opacity: 1; animation: qf-sweep 1.5s var(--qf-ease) infinite; }
+    /* 悬停：只扫一次，静止后完全不可见——避免长期挂在页面上干扰阅读 */
+    .qf-tool-card:hover::after, .qf-btn.primary:hover::after { animation: qf-sweep .62s var(--qf-ease) 1; }
+    @keyframes qf-sweep { from { opacity: 1; transform: translateX(-105%); } to { opacity: 1; transform: translateX(105%); } }`;
   const HELPER = `
     .qf-helper { position: fixed; z-index: 2147483200; top: 12vh; left: 16px;
       width: min(340px, calc(100vw - 25px)); max-height: 72vh; display: flex; flex-direction: column;
@@ -283,7 +325,9 @@
     .qf-jobs-filter.on { background: var(--qf-brand-grad); border-color: transparent; color: #fff; }
     .qf-jobs-filter .n { opacity: .8; margin-left: 3px; }
     .qf-jobs-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--qf-border); border-radius: var(--qf-r-sm); }
-    .qf-job { display: flex; gap: 8px; align-items: flex-start; padding: 9px 10px; border-bottom: 1px solid #eef3fb; }
+    .qf-job { display: flex; gap: 8px; align-items: flex-start; padding: 9px 10px; border-bottom: 1px solid #eef3fb;
+      animation: qf-rise .2s var(--qf-ease) both; animation-delay: calc(var(--i, 0) * 22ms); }
+    .qf-job:hover { background: #f7faff; }
     .qf-job:last-child { border-bottom: none; }
     .qf-job .info { flex: 1; min-width: 0; }
     .qf-job .top { display: flex; align-items: center; gap: 6px; }
@@ -312,7 +356,7 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     }`;
-  const STYLE = [TOKENS, BASE, BALL, PANEL, SELECT, DIALOG, PROGRESS, HELPER, JOBS, TOAST].join('\n');
+  const STYLE = [TOKENS, BASE, BALL, PANEL, SELECT, DIALOG, PROGRESS, SWEEP, HELPER, JOBS, TOAST].join('\n');
 
   const POS_KEY = 'qfBallPosition';
   // 投递状态（与 lib/storage.js 的 JOB_STATUS 保持一致；overlay 先加载，不能反向引用）
@@ -329,6 +373,12 @@
   let dragState, selectMask, selectionCallback, toastTimer, toastOutTimer, panelAnimTimer, savePosTimer, watchdogTimer, removalObserver, miniEl;
   let miniTop = NaN;   // 隐藏球时记下球的中心高度，让边缘恢复把手出现在同一位置
   let helperWait = null;
+  let ballStateTimer = null;
+  let stopArmTimer = null;
+  let motionOn = true;   // 设置里的「交互动效」开关；关闭只撤动画，不改颜色与描边
+  // 进度窗计时：单一 interval + 时间戳差值（不累加，切后台被节流回来也不会漂）
+  let progressTimer = null, progressT0 = 0, phaseT0 = 0, nextLoopAt = 0, loopKey = '', loopIdx = 0;
+  const BALL_STATES = ['is-busy', 'is-warn', 'is-ok'];
 
   function node(tag, cls, text) {
     const el = document.createElement(tag);
@@ -355,6 +405,7 @@
     } catch (e) {}
     if (stale) setTimeout(() => toast('检测到旧版悬浮球残留（扩展刚更新过），刷新页面即可清理。'), 900);
     host = node('div'); host.id = '__qf_overlay_host__';
+    if (!motionOn) host.classList.add('qf-still');
     shadow = host.attachShadow({ mode: 'open' });
     shadow.appendChild(node('style', '', STYLE));
     buildBall();
@@ -374,6 +425,10 @@
   function teardown() {
     try { if (watchdogTimer) clearInterval(watchdogTimer); } catch (e) {}
     watchdogTimer = null;
+    stopProgressClock();
+    clearTimeout(ballStateTimer);
+    clearTimeout(stopArmTimer);
+    document.removeEventListener('keydown', progressEscape, true);
     try { if (removalObserver) removalObserver.disconnect(); } catch (e) {}
     removalObserver = null;
     try { if (host) host.remove(); } catch (e) {}
@@ -453,6 +508,24 @@
     ui.ball.title = open ? '点击收起助手｜可沿右边框上下拖动' : '点击打开助手｜可沿右边框上下拖动';
     const icon = ui.ball.querySelector('.icon');
     if (icon) icon.textContent = open ? '\u00D7' : '\u26A1\uFE0E';
+  }
+
+  // 设置里的动效开关。宿主元素上的 class 会被 Shadow DOM 内的 :host(.qf-still) 规则命中，
+  // 所以即使球是后来重建的（buildUI 里也会读这个标志）也不会漏掉。
+  function setMotion(on) {
+    motionOn = on !== false;
+    if (host) host.classList.toggle('qf-still', !motionOn);
+  }
+
+  // 光晕状态：busy 快呼吸（填写进行中）、ok/warn 是「刚发生了什么」的短提示，到点自动回落到常态慢呼吸。
+  // 只换 ::before 的颜色与速率，不动球的尺寸与坐标。
+  function setBallState(state, holdMs) {
+    if (!ui.ball) return;
+    clearTimeout(ballStateTimer);
+    for (const c of BALL_STATES) ui.ball.classList.remove(c);
+    const cls = state === 'busy' || state === 'warn' || state === 'ok' ? 'is-' + state : '';
+    if (cls) ui.ball.classList.add(cls);
+    if (cls && cls !== 'is-busy') ballStateTimer = setTimeout(() => setBallState(''), holdMs || 5000);
   }
 
   function resetBallPos() {
@@ -663,38 +736,113 @@
 
   // ---------------- 进度窗口 ----------------
   const PHASES = ['read', 'understand', 'fill'];
+  // 阶段副文案：主标题仍由调用方给（12 个调用点不用改），这里按阶段轮播一行「正在做什么」，
+  // 让「它是不是卡住了」这个问题始终有一行话在回答。
+  const PHASE_LOOP = {
+    // 每个阶段的第一条都刻意避开调用方已经写在上面的话，否则会出现两行近乎重复的文案
+    read: ['简历只存在你的浏览器里，不会上传。', '正在准备字段字典与匹配规则…'],
+    understand: ['按标签、占位符与语义规则匹配字段…', '正在分辨表单分组与控件类型…', '顺带识别必填项，结束后会单独标出来…'],
+    fill: ['逐个写入，自定义组件会尝试自动点选…', '填好的描绿、失败的描红，结束后请核对…', '请保持当前页面打开，填写完成后请人工核对再提交'],
+    trusted: ['合成事件点不开这个组件，改用真实鼠标事件…', '页面顶部可能出现调试横幅，那是可信输入的正常提示。'],
+    ai: ['启发式没命中，正在让 AI 观察面板并逐步点击…', '这一步最慢，可能要十几秒，请先不要操作页面。']
+  };
+  const LOOP_MS = 2400;
   const PHASE_ICON = { read: '\u26A1\uFE0E', understand: '⌕', fill: '✎' };
+
+  function fmtClock(ms) {
+    const s = Math.max(0, ms) / 1000;
+    // 10 秒内给一位小数：整秒粒度会让开头那一秒永远显示 00:00，看着像没在计时
+    if (s < 10) return s.toFixed(1) + ' 秒';
+    const t = Math.round(s);
+    return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+  }
+  function stopProgressClock() {
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+  }
+  function swapText(el, text) {
+    if (!el || el.textContent === text) return;
+    el.textContent = text;
+    el.classList.remove('qf-swap');
+    void el.offsetWidth;   // 重放一次性动画：和 setStats 的数字弹跳同一套手法
+    el.classList.add('qf-swap');
+  }
+  // 可信输入 / AI 辅助这两档仍归在「填写页面」胶囊下，但要给它们自己的话
+  function loopKeyOf(phase, stage) {
+    if (/可信输入/.test(stage)) return 'trusted';
+    if (/AI|辅助点击/.test(stage)) return 'ai';
+    return phase;
+  }
+  function progressTick() {
+    const shade = ui.progress;
+    if (!shade || !shade.isConnected) { stopProgressClock(); return; }
+    const now = Date.now();
+    const el = shade.querySelector('[data-role=elapsed]');
+    if (el) el.textContent = '已用 ' + fmtClock(now - progressT0) + ' · 本阶段 ' + fmtClock(now - phaseT0);
+    if (now >= nextLoopAt) {
+      nextLoopAt = now + LOOP_MS;
+      const list = PHASE_LOOP[loopKey] || [];
+      if (list.length > 1) {
+        loopIdx = (loopIdx + 1) % list.length;
+        swapText(shade.querySelector('[data-role=comment]'), list[loopIdx]);
+      }
+    }
+  }
 
   function showProgress(stage, detail, ratio, opts) {
     const o = opts || {};
     let shade = ui.progress;
     if (!shade || !shade.isConnected) {
       shade = node('div', 'qf-shade');
-      shade.innerHTML = `<div class="qf-dialog is-busy" role="status" aria-live="polite">
+      shade.innerHTML = `<div class="qf-dialog is-busy" role="status" aria-live="polite" aria-busy="true" tabindex="-1">
         <div class="qf-progress-symbol" data-role="sym">⌕</div>
         <h3 data-role="stage"></h3><p class="qf-sub" data-role="detail"></p>
         <div class="qf-progress-track"><div class="qf-progress-fill"></div></div>
         <div class="qf-steps"><span data-step="read">读取简历</span><span data-step="understand">理解页面</span><span data-step="fill">填写页面</span></div>
         <p class="qf-progress-count" data-role="progressCount"></p>
-        <p class="qf-progress-comment">请保持当前页面打开，填写完成后请人工核对再提交</p>
+        <p class="qf-progress-time" data-role="elapsed">已用 00:00 · 本阶段 00:00</p>
+        <p class="qf-progress-other qf-hidden" data-role="other"></p>
+        <div class="qf-cancel-stat qf-hidden" data-role="cancelStat"></div>
+        <p class="qf-progress-comment" data-role="comment"></p>
         <div class="qf-dialog-actions"><button class="qf-btn danger" data-act="stop">停止填写</button>
+          <button class="qf-btn ghost qf-hidden" data-act="fix">去补齐缺项</button>
           <button class="qf-btn primary qf-hidden" data-act="done">查看页面</button></div>
         <div class="qf-done-ask qf-hidden" data-role="doneAsk"><span>这次填写对你有帮助吗？</span>
           <button class="qf-btn" data-act="good">好用</button><button class="qf-btn" data-act="bad">反馈</button></div>
       </div>`;
       shade.addEventListener('click', e => {
         const act = e.target.closest('[data-act]')?.dataset.act;
-        if (act === 'stop') handlers.onStop?.();
+        if (act === 'stop') onStopClick(shade);
         else if (act === 'done') shade.classList.add('qf-hidden');
+        else if (act === 'fix') handlers.onFixMissing?.();
         else if (act === 'good') { shade.classList.add('qf-hidden'); toast('感谢支持！'); }
         else if (act === 'bad') handlers.onFeedback?.('progress');
       });
       shadow.appendChild(shade); ui.progress = shade;
+      // Esc 中止：进行中走两段式，完成/结算态则直接收起窗口
+      document.addEventListener('keydown', progressEscape, true);
+      // 只在「页面本来没有焦点」时把焦点送进对话框；填写过程中不抢表单光标
+      const dlg0 = shade.querySelector('.qf-dialog');
+      if (!document.activeElement || document.activeElement === document.body) {
+        try { dlg0.focus({ preventScroll: true }); } catch (e) { dlg0.focus(); }
+      }
+    }
+    // 计时在「每一轮填写开始时」起，而不是只在节点创建时起：
+    // 完成态点「查看页面」只是隐藏遮罩，节点还在，下一轮若不再重建就会永远停在 00:00
+    if (!progressTimer) {
+      progressT0 = Date.now(); loopKey = '';
+      nextLoopAt = progressT0 + LOOP_MS;
+      progressTimer = setInterval(progressTick, 250);
+      disarmStop(shade.querySelector('[data-act=stop]'));   // 新一轮开始，上一轮的上膛要松开
     }
     shade.classList.remove('qf-hidden');
-    shade.querySelector('.qf-dialog').classList.add('is-busy');
-    shade.querySelector('[data-role=stage]').textContent = stage;
-    shade.querySelector('[data-role=detail]').textContent = detail || '';
+    const dialog = shade.querySelector('.qf-dialog');
+    dialog.classList.add('is-busy');
+    dialog.classList.remove('is-cancelled');
+    dialog.classList.remove('is-done');
+    dialog.setAttribute('aria-busy', 'true');
+    shade.querySelector('[data-role=cancelStat]').classList.add('qf-hidden');
+    swapText(shade.querySelector('[data-role=stage]'), stage);
+    swapText(shade.querySelector('[data-role=detail]'), detail || '');
     shade.querySelector('[data-role=progressCount]').textContent = o.count || '';
     shade.querySelector('.qf-progress-fill').style.width = Math.max(2, Math.min(100, ratio || 5)) + '%';
     const phase = PHASES.includes(o.phase) ? o.phase
@@ -706,28 +854,148 @@
       el.classList.toggle('on', i === idx);
       el.classList.toggle('done', i < idx);
     });
-    shade.querySelector('[data-act=stop]').classList.remove('qf-hidden');
+    // 换阶段就把「本阶段计时」与副文案轮播一起归零，否则切到填写阶段还挂着理解阶段的话
+    const key = loopKeyOf(phase, stage);
+    if (key !== loopKey) {
+      loopKey = key; phaseT0 = Date.now(); loopIdx = 0;
+      nextLoopAt = phaseT0 + LOOP_MS;
+      shade.querySelector('[data-role=comment]').textContent = (PHASE_LOOP[key] || [''])[0];
+    }
+    const stopBtn = shade.querySelector('[data-act=stop]');
+    // 注意：这里不能 disarmStop。逐字段进度每几十毫秒就会调一次 showProgress，
+    // 每次都把「确认停止？」改回「停止填写」，用户第二下永远点不到确认，两段式取消等于没有。
+    stopBtn.classList.remove('qf-hidden');
     shade.querySelector('[data-act=done]').classList.add('qf-hidden');
+    shade.querySelector('[data-act=fix]').classList.add('qf-hidden');
     shade.querySelector('[data-role=doneAsk]').classList.add('qf-hidden');
   }
-  function completeProgress(text, detail, savedSeconds) {
+  // 两段式取消：第一下只把「停止填写」上膛，第二下才真的中止。
+  // 填到一半误停的代价（要重跑整轮）比多确认一次大得多。
+  function onStopClick(shade) {
+    const btn = shade.querySelector('[data-act=stop]');
+    if (!btn) return;
+    if (btn.classList.contains('is-armed')) { disarmStop(btn); handlers.onStop?.(); return; }
+    btn.classList.add('is-armed');
+    btn.textContent = '确认停止？';
+    clearTimeout(stopArmTimer);
+    stopArmTimer = setTimeout(() => disarmStop(btn), 3000);
+  }
+  function progressEscape(e) {
+    if (e.key !== 'Escape') return;
+    const shade = ui.progress;
+    if (!shade || !shade.isConnected || shade.classList.contains('qf-hidden')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (shade.querySelector('.qf-dialog').classList.contains('is-busy')) onStopClick(shade);
+    else shade.classList.add('qf-hidden');
+  }
+  function disarmStop(btn) {
+    if (!btn) return;
+    clearTimeout(stopArmTimer);
+    btn.classList.remove('is-armed');
+    btn.textContent = '停止填写';
+  }
+  function completeProgress(text, detail, savedSeconds, elapsedMs) {
     if (!ui.progress) return;
-    ui.progress.querySelector('.qf-dialog').classList.remove('is-busy');
+    stopProgressClock();
+    const dialog = ui.progress.querySelector('.qf-dialog');
+    dialog.classList.remove('is-busy');
+    dialog.classList.remove('is-cancelled');
+    dialog.classList.add('is-done');
+    dialog.setAttribute('aria-busy', 'false');
     ui.progress.querySelector('[data-role=sym]').textContent = '✓';
     ui.progress.querySelector('[data-role=stage]').textContent = text;
     ui.progress.querySelector('[data-role=detail]').textContent = detail || '';
     ui.progress.querySelector('.qf-progress-fill').style.width = '100%';
     ui.progress.querySelectorAll('[data-step]').forEach(el => { el.classList.remove('on'); el.classList.add('done'); });
-    ui.progress.querySelector('[data-act=stop]').classList.add('qf-hidden');
+    const ms = elapsedMs === undefined ? Date.now() - progressT0 : elapsedMs;
+    const el = ui.progress.querySelector('[data-role=elapsed]');
+    if (el) el.textContent = '本次用时 ' + fmtClock(ms);
+    const cm = ui.progress.querySelector('[data-role=comment]');
+    if (cm) cm.textContent = '请逐项核对页面内容后再自行提交，插件不会替你点提交。';
+    const other = ui.progress.querySelector('[data-role=other]');
+    if (other) { other.textContent = ''; other.classList.add('qf-hidden'); }
+    const stopBtn = ui.progress.querySelector('[data-act=stop]');
+    disarmStop(stopBtn);
+    stopBtn.classList.add('qf-hidden');
     ui.progress.querySelector('[data-act=done]').classList.remove('qf-hidden');
     ui.progress.querySelector('[data-role=doneAsk]').classList.toggle('qf-hidden', !(savedSeconds > 0));
+  }
+  // 取消后的结算态：只给「一键填写」路径保留遮罩（选区填写仍走 closeProgress 直接销毁，
+  // region-helper 会断言选区结束后 .qf-shade 数为 0）
+  function showCancelled(stat) {
+    if (!ui.progress) return;
+    const dialog = ui.progress.querySelector('.qf-dialog');
+    // 上膛与确认之间填写正好跑完时，completeProgress 已经报过完成，别把「跑完了」说成「被中止」
+    if (!dialog.classList.contains('is-busy')) return;
+    const s = stat || {};
+    stopProgressClock();
+    dialog.classList.remove('is-busy');
+    dialog.classList.remove('is-done');
+    dialog.classList.add('is-cancelled');
+    dialog.setAttribute('aria-busy', 'false');
+    const msLeft = Date.now() - progressT0;
+    const el = ui.progress.querySelector('[data-role=elapsed]');
+    if (el) el.textContent = '已用时 ' + fmtClock(msLeft);
+    ui.progress.querySelector('[data-role=sym]').textContent = '■';
+    ui.progress.querySelector('[data-role=stage]').textContent = '已停止填写';
+    ui.progress.querySelector('[data-role=detail]').textContent = '已写入的内容不会被清空，请人工检查一遍。';
+    const box = ui.progress.querySelector('[data-role=cancelStat]');
+    const cell = (label, value) => {
+      const d = node('div');
+      d.append(node('b', '', value), node('span', '', label));
+      return d;
+    };
+    box.replaceChildren(
+      cell('已填写', (s.filled || 0) + ' 项'),
+      // 一键填写最多三轮（动态表单会边填边长），这里只能报「本轮」还剩多少，别写成全局剩余
+      cell('本轮剩余', (s.remaining || 0) + ' 项'),
+      cell('已用时', fmtClock(msLeft)));
+    box.classList.remove('qf-hidden');
+    const cm = ui.progress.querySelector('[data-role=comment]');
+    if (cm) cm.textContent = '失败与缺项仍按红/橙描边留在页面上，可以直接接着手动补。';
+    const stopBtn = ui.progress.querySelector('[data-act=stop]');
+    disarmStop(stopBtn);
+    stopBtn.classList.add('qf-hidden');
+    ui.progress.querySelector('[data-act=done]').classList.remove('qf-hidden');
+    ui.progress.querySelector('[data-role=doneAsk]').classList.add('qf-hidden');
+    setBallState('warn');
   }
   // 进度窗用完即销毁：只加 qf-hidden 会在 shadowRoot 里留下一个隐藏遮罩，
   // 其它弹窗/测试按 .qf-shade 找元素时会先命中它
   function closeProgress() {
+    stopProgressClock();
+    document.removeEventListener('keydown', progressEscape, true);
     if (!ui.progress) return;
     ui.progress.remove();
     ui.progress = null;
+    loopKey = '';
+  }
+  // 供 content-main 把「为你节省约 N 秒」换成真实用时（进度窗已销毁时返回 0）
+  // 完成态里给一条直达编辑器「未补齐视图」的路：缺项只是标红，用户还得自己翻字段找
+  function offerFixMissing(count) {
+    if (!ui.progress || !ui.progress.isConnected) return;
+    const btn = ui.progress.querySelector('[data-act=fix]');
+    if (!btn) return;
+    const n = Math.max(0, count | 0);
+    if (!n) { btn.classList.add('qf-hidden'); return; }
+    btn.textContent = '去补齐缺项（' + n + '）';
+    btn.classList.remove('qf-hidden');
+  }
+  function progressElapsedMs() { return progressT0 ? Math.max(0, Date.now() - progressT0) : 0; }
+  // 其它 iframe 区域的实时进度：只写这一行，绝不回头调 showProgress——
+  // lead 帧自己填完后已是完成态，被后续上报重新拉回「进行中」会更奇怪
+  function setProgressOther(text) {
+    if (!ui.progress || !ui.progress.isConnected) return false;
+    const dialog = ui.progress.querySelector('.qf-dialog');
+    // 子区域的最后一条上报常在完成之后才到，那时汇总行已经说明了总数，别再把它点亮
+    if (!dialog.classList.contains('is-busy')) return false;
+    const el = ui.progress.querySelector('[data-role=other]');
+    if (!el) return false;
+    if (!text) { el.classList.add('qf-hidden'); el.textContent = ''; return true; }
+    swapText(el, text);
+    el.classList.remove('qf-hidden');
+    return true;
   }
 
   // ---------------- 选区填写 ----------------
@@ -1056,8 +1324,11 @@
         box.appendChild(node('div', 'qf-rk-empty',
           active === 'all' ? '还没有记录。在职位页面点击「记录职位」即可保存。' : '这个状态下还没有记录。'));
       }
+      let rowIndex = 0;
       for (const r of list) {
         const row = node('div', 'qf-job');
+        // 逐行错峰入场：一眼看得出这是「一列记录」而不是一次性糊出来的块
+        row.style.setProperty('--i', String(Math.min(rowIndex++, 14)));
         const info = node('div', 'info');
         const top = node('div', 'top');
         top.appendChild(node('div', 'ti', r.title || '(未命名职位)'));
@@ -1124,7 +1395,9 @@
   // ---------------- 对外 API ----------------
   const api = {
     mount, togglePanel, toggleMore, toast,
-    showProgress, completeProgress, closeProgress,
+    showProgress, completeProgress, closeProgress, showCancelled, offerFixMissing,
+    getElapsed: progressElapsedMs,
+    setProgressOther,
     startSelection, stopSelection, showRegionPicker, showHelper, closeHelper,
     showRecordJob, showJobsPanel, showFeedback,
     showBall() {
@@ -1209,7 +1482,12 @@
     setBusy(busy) {
       const btn = ui.panel && ui.panel.querySelector('[data-act=fill]');
       if (btn) { btn.disabled = !!busy; btn.classList.toggle('is-loading', !!busy); btn.textContent = busy ? '填写中…' : '⚡︎ 一键填写'; }
+      if (busy) setBallState('busy');
+      // 解除忙碌只把「进行中」的快呼吸收回常态；结算用的 ok/warn 是随后单独设的，别在这里抹掉
+      else if (ui.ball && ui.ball.classList.contains('is-busy')) setBallState('');
     },
+    setBallState,
+    setMotion,
     isPanelOpen() { return !!ui.panel && !ui.panel.classList.contains('qf-hidden'); }
   };
   root.QuickFillOverlay = api;

@@ -405,6 +405,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true });
           break;
         }
+        // 逐字段进度：非 lead 帧节流上报，这里定向转给 lead 帧聚合成「其它区域已填 N 项」
+        case 'frame:fillStep': {
+          if (sender.tab && msg.leadId != null && msg.leadId !== sender.frameId) {
+            chrome.tabs.sendMessage(sender.tab.id,
+              { type: 'frame:stepSummary', from: sender.frameId, ok: msg.ok, done: msg.done },
+              { frameId: msg.leadId }).catch(() => {});
+          }
+          sendResponse({ ok: true });
+          break;
+        }
         case 'frame:fill': {
           if (sender.tab) {
             // 点球帧担任 lead（显示进度），其余帧静默填写
@@ -416,6 +426,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'frame:clear': {
           if (sender.tab) {
             chrome.tabs.sendMessage(sender.tab.id, { type: 'doClear' }, {}).catch(() => {});
+          }
+          sendResponse({ ok: true });
+          break;
+        }
+        // 中止填写但保留描边（取消 ≠ 清除标记）：广播给所有帧，各自的 fillToken 才会前进
+        case 'frame:stop': {
+          if (sender.tab) {
+            chrome.tabs.sendMessage(sender.tab.id, { type: 'doStop' }, {}).catch(() => {});
           }
           sendResponse({ ok: true });
           break;

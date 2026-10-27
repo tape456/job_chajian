@@ -11,7 +11,7 @@ const els = {
   aiBaseUrl: $('#aiBaseUrl'), aiApiKey: $('#aiApiKey'), aiModel: $('#aiModel'),
   btnTestAi: $('#btnTestAi'), aiTestResult: $('#aiTestResult'),
   parserBaseUrl: $('#parserBaseUrl'), useOcr: $('#useOcr'),
-  aiDomAgent: $('#aiDomAgent'), trustedInput: $('#trustedInput')
+  aiDomAgent: $('#aiDomAgent'), trustedInput: $('#trustedInput'), motionFx: $('#motionFx')
 };
 
 function fmtTime(ts) {
@@ -107,12 +107,16 @@ els.fileParse.addEventListener('change', async () => {
   if (!file) return;
   els.btnParse.disabled = true;
   els.btnParse.textContent = '解析中…';
+  ParseScan.begin(file.name);
   try {
     const settings = await S.getSettings();
     const { data, warnings } = await AgentClient.parseResumeWithAgent(
       file, settings,
       (phase, msg) => { els.btnParse.textContent = msg; },
+      { onLine: ParseScan.onLine },
     );
+    // 先把逐行扫描放完再开编辑器：新标签页一抢焦点，popup 就被系统关掉了
+    await ParseScan.finish();
     const r = ResumeSchema.newResume(file.name.replace(/\.[^.]+$/, '') + '-解析');
     r.data = ResumeSchema.normalizeData(data);
     const resumes = await S.getResumes();
@@ -126,7 +130,7 @@ els.fileParse.addEventListener('change', async () => {
       alert('解析完成，已创建新简历并打开编辑器。\n请核对并补充以下内容：\n- ' + warnings.join('\n- '));
     }
   } catch (e) {
-    alert('解析失败：' + e.message);
+    ParseScan.fail('解析失败：' + e.message);
   }
   els.btnParse.disabled = false;
   els.btnParse.textContent = '上传简历解析';
@@ -182,6 +186,7 @@ async function loadSettings() {
   els.useOcr.checked = !!s.useOcr;
   els.aiDomAgent.checked = s.aiDomAgentEnabled !== false;
   els.trustedInput.checked = s.trustedInputEnabled !== false;
+  els.motionFx.checked = s.motionEnabled !== false;
   els.aiConfig.classList.toggle('hidden', !s.aiEnabled);
 }
 
@@ -195,7 +200,8 @@ async function saveSettings() {
     parserBaseUrl: els.parserBaseUrl.value.trim(),
     useOcr: els.useOcr.checked,
     aiDomAgentEnabled: els.aiDomAgent.checked,
-    trustedInputEnabled: els.trustedInput.checked
+    trustedInputEnabled: els.trustedInput.checked,
+    motionEnabled: els.motionFx.checked
   });
   els.aiConfig.classList.toggle('hidden', !els.aiEnabled.checked);
 }

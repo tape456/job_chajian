@@ -488,5 +488,28 @@ check('contactTel 仍命中电话', (FR.matchSignal('contactTel') || {}).ruleId 
 check('userName 仍命中姓名', (FR.matchSignal('userName') || {}).ruleId === 'name', FR.matchSignal('userName') && FR.matchSignal('userName').ruleId);
 check('中文包含匹配不受影响', (FR.matchSignal('请输入手机号') || {}).ruleId === 'phone');
 
+console.log('\n[ 设计令牌一致性（popup/tokens.css ↔ overlay.js）]');
+// Shadow DOM 用不了 <link>，overlay.js 里是同一套值的拷贝；漂了就会出现「页面内外两套品牌色」
+const tokensCss = fs.readFileSync(path.join(__dirname, '../popup/tokens.css'), 'utf8');
+const overlayJs = fs.readFileSync(path.join(__dirname, '../content/overlay.js'), 'utf8');
+const SYNC_TOKENS = [
+  'qf-brand', 'qf-brand-2', 'qf-brand-deep', 'qf-ok', 'qf-ok-2',
+  'qf-t1', 'qf-t2', 'qf-t3', 'qf-bg', 'qf-bg-soft', 'qf-border', 'qf-border-2',
+  'qf-warn', 'qf-bad', 'qf-r-lg', 'qf-r-md', 'qf-r-sm', 'qf-r-pill',
+];
+const pick = (src, name) => {
+  const m = src.match(new RegExp('--' + name + '\\s*:\\s*([^;]+);'));
+  return m ? m[1].replace(/\s+/g, '').toLowerCase() : null;
+};
+for (const name of SYNC_TOKENS) {
+  const a = pick(tokensCss, name), b = pick(overlayJs, name);
+  check('--' + name + ' 两边一致', a !== null && a === b, { tokens: a, overlay: b });
+}
+check('缓动函数两边一致', pick(tokensCss, 'qf-ease') === pick(overlayJs, 'qf-ease'));
+check('弹窗阴影令牌两边一致', pick(tokensCss, 'qf-sp-panel') === pick(overlayJs, 'qf-sp-panel'));
+const legacy = ['popup/popup.css', 'popup/editor.css', 'popup/records.html', 'popup/tokens.css']
+  .filter(f => /#3b6ef5|#6b93ff/i.test(fs.readFileSync(path.join(__dirname, '..', f), 'utf8')));
+check('扩展页不再残留旧品牌蓝 #3b6ef5/#6b93ff', legacy.length === 0, legacy);
+
 console.log(`\nTOTAL ${pass + fail} PASS ${pass} FAIL ${fail}`);
 process.exit(fail ? 1 : 0);

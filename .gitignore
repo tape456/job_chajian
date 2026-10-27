@@ -1,7 +1,5 @@
-.edge-test*/
-.edge-verify-profile/
-.edge-test-profile/
-.edge-ti-profile/
+# CDP 自测用的独立 Edge profile（每次新建一个，别入库）
+.edge-*/
 .workbuddy-ai/
 shots/
 *.log

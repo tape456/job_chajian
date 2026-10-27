@@ -547,22 +547,44 @@
   async function fillAll(matched, isCancelled, onProgress, onAgentStep, onPhase) {
     const results = [];
     const cancelled = typeof isCancelled === 'function' ? isCancelled : () => false;
+    const total = matched.length;
+    // 第二参 info 让进度窗能说清「正在第几项、填的是哪个字段、结果如何」；
+    // 第一参仍是已处理条数，老的 `index => ...` 调用点不受影响。
+    const step = (state, m, index, res) => {
+      if (typeof onProgress !== 'function') return;
+      onProgress(index, {
+        state, index, total,
+        label: (m.entry && m.entry.label) || '',
+        value: m.entry ? String(m.entry.value).slice(0, 24) : '',
+        kind: (m.field && m.field.kind) || '',
+        ok: res ? res.ok === true : undefined,
+        reason: (res && res.reason) || '',
+        layer: (res && res.layer) || ''
+      });
+    };
     for (const m of matched) {
       if (cancelled()) return results;
       m.field.matchedPath = m.path;
+      markField(m.field, 'filling', m);
+      step('start', m, results.length + 1);
       let res = { ok: false, reason: 'exception', layer: 'native' };
       try {
         res = await fillMatch(m, { cancelled, onStep: onAgentStep, onPhase, label: m.entry && m.entry.label });
       } catch (e) { res = { ok: false, reason: 'exception', layer: 'native' }; }
-      if (cancelled()) return results;
+      if (cancelled()) { dropFilling(m.field); return results; }
       if (res.ok !== true && (m.field.kind === 'dropdown' || m.field.kind === 'cascader')) {
         try { await navigator.clipboard.writeText(String(m.entry.value)); } catch (e) {}
       }
       results.push({ match: m, ok: res.ok, reason: res.reason, layer: res.layer });
       markField(m.field, res.ok === true ? 'filled' : res.ok === 'other' ? 'filled-other' : 'failed', m, res.reason);
-      if (onProgress) onProgress(results.length);
+      flashLand(m.field);
+      step('end', m, results.length, res);
     }
     return results;
+  }
+
+  function dropFilling(field) {
+    for (const el of fieldEls(field)) if (el && el.classList) el.classList.remove(CLASS.filling, CLASS.land);
   }
 
   // ---------- 高亮标记 ----------
@@ -573,11 +595,13 @@
     missing: '__qf_missing',
     unmatched: '__qf_unmatched',
     skipped: '__qf_skip',      // 选区填写专用：识别得到但不属于本次选中的那一组
-    required: '__qf_required'  // 必填但最终仍为空（含未识别），比「简历缺失」更醒目
+    required: '__qf_required', // 必填但最终仍为空（含未识别），比「简历缺失」更醒目
+    filling: '__qf_filling',   // 正在写这一个控件（同一时刻只有一个）
+    land: '__qf_land'          // 刚写完的一次性落定光，与上面的状态类叠加使用
   };
 
   function markField(field, state, match, reason) {
-    const els = field.kind === 'radio' || field.kind === 'checkboxGroup' ? field.group : [field.el];
+    const els = fieldEls(field);
     for (const el of els) {
       for (const c of Object.values(CLASS)) el.classList.remove(c);
       el.classList.add(CLASS[state] || CLASS.failed);
@@ -587,8 +611,33 @@
     }
   }
 
+  function fieldEls(field) {
+    return (field.kind === 'radio' || field.kind === 'checkboxGroup') && Array.isArray(field.group) ? field.group : [field.el];
+  }
+
+  // 落定光：状态类已由 markField 打上，这里只叠一个一次性动画类，播完即摘，
+  // 免得页面上一堆 __qf_land 干扰「标记数量稳定」这类判定
+  function flashLand(field) {
+    for (const el of fieldEls(field)) {
+      if (!el || !el.classList) continue;
+      el.classList.add(CLASS.land);
+      const off = () => el.classList.remove(CLASS.land);
+      el.addEventListener('animationend', off, { once: true });
+      setTimeout(off, 600);
+    }
+  }
+
+  // 中止时把「正在填」的蓝光摘掉：in-flight 的 fillMatch 还会跑完并自己打状态类，
+  // 但如果它在半途就因 cancelled 返回，蓝光会永远留在页面上
+  function clearFilling(doc) {
+    (doc || document).querySelectorAll('.' + CLASS.filling + ', .' + CLASS.land).forEach(el => {
+      el.classList.remove(CLASS.filling);
+      el.classList.remove(CLASS.land);
+    });
+  }
+
   function stateText(s) {
-    return { filled: '已填写', 'filled-other': '已选"其他"，请人工确认', failed: '填写失败，请手动处理', missing: '简历缺失该项，请补充', unmatched: '未识别，请手动填写', skipped: '不属于本次选中的这一组，已跳过', required: '必填项为空，请手动补充' }[s] || s;
+    return { filled: '已填写', 'filled-other': '已选"其他"，请人工确认', failed: '填写失败，请手动处理', missing: '简历缺失该项，请补充', unmatched: '未识别，请手动填写', skipped: '不属于本次选中的这一组，已跳过', required: '必填项为空，请手动补充', filling: '正在填写' }[s] || s;
   }
 
   // 失败原因码 → 人话。放在这里而不是新文件：它只是一张查找表，
@@ -665,6 +714,7 @@
 
   root.FieldFiller = {
     fillAll, fillMatch, markField, clearMarks, formatDateFor, CLASS, stateText, reasonText,
+    flashLand, clearFilling, dropFilling,
     setNativeValue, fillTextInput, fillSelect, fillContenteditable, setTextValue,
     fillWidgetTarget, widgetFieldOf
   };

@@ -55,6 +55,11 @@
         <span>可信输入（用真实鼠标/键盘事件点自绘组件）</span>
         <input type="checkbox" id="trustedInput" checked>
       </label>
+      <label class="switch-row">
+        <span>交互动效（扫光、呼吸光晕、逐行揭示）</span>
+        <input type="checkbox" id="motionFx" checked>
+      </label>
+      <p class="tip">关掉后进度窗、悬浮球和字段描边都只保留静态样式，信息内容不变。系统级「减少动态效果」设置本来就会被自动遵守。</p>
       <p class="tip">省市区级联、自绘下拉这类组件会忽略程序合成的点击，只认真实输入。开启后插件通过调试协议发出可信事件来点中它们，代价是页面顶部出现一条「正在调试此浏览器」横幅（点它的「取消」会退回合成事件，不影响其它填写），且同一标签页开着 F12 时不可用。</p>
       <div id="aiConfig" class="ai-config hidden">
         <label>API 地址 <input type="text" id="aiBaseUrl" placeholder="https://api.deepseek.com/v1" title="OpenAI 兼容地址；填到主机端口或带 /v1 均可，插件会自动补全 /v1"></label>
@@ -96,6 +101,7 @@
   <script src="../lib/vendor/pdf.min.js"></script>
   <script src="../lib/resume-parser.js"></script>
   <script src="../lib/agent-client.js"></script>
+  <script src="parse-scan.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

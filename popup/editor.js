@@ -22,6 +22,8 @@ async function init() {
   renderNav();
   renderForm();
   bindNavActions();
+  // 从进度窗的「去补齐缺项」进来时直接落在未补齐视图（等一帧让字段类名就位再跳转）
+  if (new URLSearchParams(location.search).get('missing') === '1') setTimeout(() => setOnlyMissing(true), 150);
   window.addEventListener('scroll', onScrollSpy, { passive: true });
   // 平滑滚动（scrollIntoView behavior:smooth）收尾时的 scroll 事件不保证触发，
   // 加 300ms 轮询兜底，保证导航高亮最终与所在模块一致
@@ -139,16 +141,18 @@ function renderNav() {
   refreshStats();
 }
 
-function bindNavActions() {
+function setOnlyMissing(on) {
+  onlyMissing = !!on;
   const btn = $('#btnOnlyMissing');
-  btn.addEventListener('click', () => {
-    onlyMissing = !onlyMissing;
-    document.body.classList.toggle('only-missing', onlyMissing);
-    btn.classList.toggle('active', onlyMissing);
-    btn.textContent = onlyMissing ? '显示全部字段' : '查看未补齐项';
-    refreshStats();
-    if (onlyMissing) jumpToFirstMissing();
-  });
+  document.body.classList.toggle('only-missing', onlyMissing);
+  btn.classList.toggle('active', onlyMissing);
+  btn.textContent = onlyMissing ? '显示全部字段' : '查看未补齐项';
+  refreshStats();
+  if (onlyMissing) jumpToFirstMissing();
+}
+
+function bindNavActions() {
+  $('#btnOnlyMissing').addEventListener('click', () => setOnlyMissing(!onlyMissing));
   $('#btnJumpMissing').addEventListener('click', jumpToFirstMissing);
 }
 
@@ -649,6 +653,7 @@ $('#btnParse').addEventListener('click', () => $('#fileParse').click());
 $('#fileParse').addEventListener('change', async () => {
   const file = $('#fileParse').files[0];
   if (!file) return;
+  ParseScan.begin(file.name);
   try {
     const settings = await S.getSettings();
     const { data, warnings } = await AgentClient.parseResumeWithAgent(
@@ -657,14 +662,16 @@ $('#fileParse').addEventListener('change', async () => {
         const btn = $('#btnParse');
         if (btn) btn.textContent = msg;
       },
+      { onLine: ParseScan.onLine },
     );
+    await ParseScan.finish();
     if (!confirm('用解析结果覆盖当前简历内容？建议先导出备份。')) return;
     resume.data = ResumeSchema.normalizeData(data);
     renderForm();
     markDirty();
     if (warnings.length) alert('解析完成，请核对以下项：\n- ' + warnings.join('\n- '));
   } catch (e) {
-    alert('解析失败：' + e.message);
+    ParseScan.fail('解析失败：' + e.message);
   }
   $('#fileParse').value = '';
   $('#btnParse').textContent = '解析导入';

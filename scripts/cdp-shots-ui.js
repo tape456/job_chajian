@@ -122,6 +122,18 @@ async function connect(wsUrl) {
   await c.ev(`(() => { ${S}.querySelector('[data-act=helper]').click(); return 1; })()`);
   await sleep(600);
   await shot('ui-7-helper.png');
+
+  // 6. 两段式取消的结算态（要重新加载：表单已填满时再点一键填写会秒完成，测不到中止）
+  await c.send('Page.reload', {});
+  await sleep(3200);
+  await c.ev(`(() => { ${S}.querySelector('.qf-ball').click(); return 1; })()`);
+  await sleep(400);
+  await c.ev(`(() => { ${S}.querySelector('[data-act=fill]').click(); return 1; })()`);
+  await sleep(900);
+  await c.ev(`(() => { const b = ${S}.querySelector('[data-act=stop]'); b.click(); b.click(); return 1; })()`);
+  await sleep(700);
+  await shot('ui-3b-cancelled.png');
+  await c.ev(`(() => { ${S}.querySelectorAll('.qf-shade').forEach(x => x.remove()); return 1; })()`);
   c.ws.close();
   console.log('完成');
 })().catch(e => { console.error('截图失败:', e.message); process.exit(1); });

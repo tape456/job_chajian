@@ -70,6 +70,45 @@ function checkResume(tag, data) {
   console.log('== 公司:', JSON.stringify((txtRes.data.work[0] || {}).company),
     '| 职务:', JSON.stringify((txtRes.data.work[0] || {}).position),
     '| 期望岗位:', JSON.stringify(txtRes.data.intention.expectedJob));
+  console.log('\n[逐行扫描 trace]');
+  {
+    const src = fs.readFileSync(txtPath, 'utf8');
+    const evs = [];
+    const traced = P.parseText(src, {}, { onLine: e => evs.push(e) });
+    const keptLines = src.split(/\r?\n/).map(l => l.trim()).filter(l => l && l.length < 300);
+    ok('trace 覆盖到每一个有效行', new Set(evs.map(e => e.n)).size === keptLines.length, evs.length);
+    ok('板块标题行标成 section', evs.some(e => e.kind === 'section' && /个人信息/.test(e.text)));
+    ok('命中行带「字段名 → 值」', evs.some(e => e.hits.some(h => h.label === '姓名' && h.value === '张三')));
+    ok('全文兜底的手机号标回它所在行', evs.some(e => e.hits.some(h => h.label === '手机号')));
+    ok('归入板块的行有 record 事件', evs.some(e => e.kind === 'record'));
+    ok('开 onLine 与不开的结果完全一致（trace 零副作用）', JSON.stringify(txtRes.data) === JSON.stringify(traced.data));
+    const byFile = [];
+    await P.parseFile(makeFile(txtPath), { onLine: e => byFile.push(e) });
+    ok('parseFile 透传 opts.onLine', byFile.length === evs.length, byFile.length);
+  }
+
+  console.log('\n[脏排版收紧]');
+  {
+    const one = txt => P.parseText(txt, {});
+    const edu = one('教育背景\n2021年9月-2022年6月 中国人民大学 工商管理 硕士').data.education[0];
+    ok('中文年月区间能抽出起止', edu.start === '2021-09' && edu.end === '2022-06', edu.start + '~' + edu.end);
+    const open = one('工作经历\n2021年9月-至今 中国移动通信集团有限公司 后端工程师').data.work[0];
+    ok('「至今」开放式区间：起始有值、结束留空', open.start === '2021-09' && !open.end, open.start + '~[' + open.end + ']');
+    ok('「至今」不会把日期粘进公司名', open.company === '中国移动通信集团有限公司', open.company);
+    ok('标签里的单位括号不影响抽取（身高（cm））', one('身高（cm）：175').data.basic.height === '175');
+    ok('PDF 断行：标签与值分两行也能接上', one('姓名：\n张三').data.basic.name === '张三');
+    ok('断行接不上时不会把冒号当成交值', one('姓名：\n\n联系方式').data.basic.name === '', JSON.stringify(one('姓名：\n\n联系方式').data.basic.name));
+    ok('行首项目符号会被剥掉', one('- 姓名：张三').data.basic.name === '张三');
+    ok('期望城市的空格分隔归一成顿号', one('期望城市：北京 上海 广州').data.intention.expectedCity === '北京、上海、广州');
+    const en = one('Name: Zhang San\nGender: Male\nPhone: 13900138000').data.basic;
+    ok('英文 Name 落到姓名字段（不是英文姓名）', en.name === 'Zhang San', en.name);
+    ok('英文 Gender/Phone 也认', en.gender === 'Male' && en.phone === '13900138000', en.gender + '/' + en.phone);
+    ok('出生日期保留「日」', one('出生日期：2000年5月1日 政治面貌：中共党员').data.basic.birthDate === '2000年5月1日');
+    ok('裸「学历」按最高学历处理', one('学历：硕士').data.basic.highestDegree === '硕士');
+    ok('「学历学校」不会被裸「学历」抢走', one('学历学校：中国人民大学').data.basic.highestDegree === '');
+    ok('点号区间仍然正常（回归保护）', one('工作经历\n2024.06-2024.12 国家电网有限公司 工程师').data.work[0].start === '2024-06');
+  }
+
   console.log('\nTOTAL', pass + fail, 'PASS', pass, 'FAIL', fail);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

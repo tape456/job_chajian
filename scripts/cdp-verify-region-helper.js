@@ -593,6 +593,10 @@ const S = "document.getElementById('__qf_overlay_host__').shadowRoot";
   check('窗口变化后越界的球会被拉回可视区', shrunk.inView, shrunk);
   check('拉回后仍吸附在浏览器右边框（横向内联定位已清除）', shrunk.docked && shrunk.inlineLeft === '', shrunk);
 
+  // 上面 [7] 把这个标签页导航到了空壳页；不导航回来的话，下一个套件会直接报「未找到页面目标」
+  await cdp.send('Page.navigate', { url: 'http://127.0.0.1:8123/test/test-form.html' }).catch(() => {});
+  await new Promise(r => setTimeout(r, 1500));
+
   cdp.close();
   console.log(`\n========== 结果: ${pass} 通过 / ${fail} 失败 ==========`);
   process.exit(fail ? 1 : 0);

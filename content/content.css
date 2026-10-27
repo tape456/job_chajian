@@ -1,5 +1,19 @@
 /* 填写结果高亮（宿主页面级样式，全部 !important 防覆盖） */
 
+/* 描边色/底色做 180ms 过渡，让「正在填 → 已填好」是一段变化而不是一次跳变。
+   注意：!important 会压过 @keyframes，所以下面的呼吸/落定动画一律只动 box-shadow
+   （这个属性在各状态类里没有被 !important 占用）。 */
+.__qf_filled,
+.__qf_filled_other,
+.__qf_failed,
+.__qf_missing,
+.__qf_unmatched,
+.__qf_skip,
+.__qf_required,
+.__qf_filling {
+  transition: outline-color .18s ease, background-color .18s ease, box-shadow .2s ease !important;
+}
+
 .__qf_filled {
   outline: 2px solid #16a34a !important;
   outline-offset: 1px !important;
@@ -43,6 +57,27 @@
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14) !important;
 }
 
+/* 正在填写：同一时刻只有一个控件带它（填写是串行的），所以这一条循环动画不会铺满页面 */
+.__qf_filling {
+  outline: 2px solid #4a8dff !important;
+  outline-offset: 1px !important;
+  background-color: rgba(74, 141, 255, 0.07) !important;
+  animation: __qf_breathe 1.05s ease-in-out infinite !important;
+}
+@keyframes __qf_breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 141, 255, 0.30); }
+  50% { box-shadow: 0 0 0 5px rgba(74, 141, 255, 0.10); }
+}
+
+/* 落定：写完一项后向外扩一圈再收掉，给「这一格刚处理好」一个明确的句号 */
+.__qf_land {
+  animation: __qf_land .36s ease-out 1 !important;
+}
+@keyframes __qf_land {
+  0% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.24); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+
 /* radio/checkbox 组高亮其 label */
 label:has(> .__qf_filled),
 label:has(.__qf_filled) {
@@ -58,4 +93,25 @@ label:has(> .__qf_required),
 label:has(.__qf_required) {
   outline: 2px solid #dc2626 !important;
   border-radius: 3px;
+}
+label:has(> .__qf_filling),
+label:has(.__qf_filling) {
+  outline: 1px solid #4a8dff !important;
+  border-radius: 3px;
+}
+
+/* 设置里关掉「交互动效」：只撤动画与过渡，颜色与描边保持不变 */
+html[data-qf-motion="off"] [class*="__qf_"],
+html[data-qf-motion="off"] label:has([class*="__qf_"]) {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* 这份兜底管的是宿主页面（overlay.js 里那份在 Shadow DOM 内，够不着这里） */
+@media (prefers-reduced-motion: reduce) {
+  [class*="__qf_"], label:has([class*="__qf_"]) {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }

@@ -32,9 +32,55 @@
   let ballHiddenByUser = false;
   let aiWarned = false;      // AI 失败提示一次就够，别每轮都弹
   let fillSummary = { count: 0, failed: 0, requiredMissing: 0 };
+  // 取消结算用的两个数：一键填写是跨轮异步过程，onStop 拿不到 doFill 的局部变量，只能挂在模块上
+  let fillStat = { filled: 0, remaining: 0 };
+  // 其它 iframe 区域上报过来的进度（frameId → { ok, done }），lead 帧据此汇总
+  let otherFrames = new Map();
+  let lastStepSent = 0;
+
+  function otherFilledText() {
+    let ok = 0, n = 0;
+    for (const v of otherFrames.values()) { ok += v.ok || 0; n++; }
+    return ok > 0 ? '其它 ' + n + ' 个区域已填 ' + ok + ' 项' : '';
+  }
+  // 非 lead 帧只报「完成一项」，且最快 350ms 一次（最后一项必报），避免逐字段消息风暴
+  function reportFillStep(leadId, info, okSoFar, done, total) {
+    if (leadId == null || myFrameId === null) return;
+    const now = Date.now();
+    if (done < total && now - lastStepSent < 350) return;
+    lastStepSent = now;
+    try {
+      chrome.runtime.sendMessage({
+        type: 'frame:fillStep', leadId, done, ok: okSoFar,
+        label: (info && info.label) || ''
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  // 进度窗的「第几项」：跨帧只填本帧的控件，所以写「本区域」而不是笼统的「共 N 项」
+  function stepText(handled, total) {
+    return '本区域 第 ' + handled + '/' + total + ' 项';
+  }
+  function fieldLine(info) {
+    const name = info.label || '未命名字段';
+    if (info.state === 'end') {
+      if (info.ok === true) return '已填 ' + name + ' → ' + (info.value || '（空）');
+      return name + ' 没填上：' + (FieldFiller.reasonText(info.reason) || '需人工处理');
+    }
+    return '正在填 ' + name + ' → ' + (info.value || '（空）');
+  }
+
+  // 动效开关：Shadow DOM 里的那套由 overlay 自己关，宿主页面的描边动画靠 documentElement 上的标记
+  function applyMotion(s) {
+    const on = !s || s.motionEnabled !== false;
+    try { QuickFillOverlay.setMotion(on); } catch (e) {}
+    if (on) delete document.documentElement.dataset.qfMotion;
+    else document.documentElement.dataset.qfMotion = 'off';
+  }
 
   async function loadContext() {
     settings = await S.getSettings();
+    applyMotion(settings);
     const resumes = await S.getResumes();
     // 站点绑定优先：同一网站始终复用上次选定的简历
     const { resume: bound, bound: isBound } = await S.getResumeForDomain(location.hostname, resumes);
@@ -225,6 +271,8 @@
     const processed = new Set();
     const failedEls = new Set();   // 填写失败的控件保留「失败」标记，不被必填提醒覆盖
     filling = true; startedAt = Date.now();
+    fillStat = { filled: 0, remaining: 0 };
+    otherFrames = new Map();
     if (showUi) {
       QuickFillOverlay.setBusy(true);
       QuickFillOverlay.showProgress('读取本地简历', '读取你保存在本机的简历，不会上传到服务器。', 7, { phase: 'read' });
@@ -237,6 +285,7 @@
       }
       const maxRounds = isTop ? 3 : 1;
       let count = 0, failed = 0;
+      let okFilled = 0, seenTotal = 0;   // 跨轮累计：给「取消结算」用的两个数
       const reasons = {};
       for (let round = 1; round <= maxRounds && !cancelled(); round++) {
         // 每一轮都回到「理解页面」：拆结构找可填区域 → 再进入「填写页面」
@@ -248,14 +297,24 @@
         if (!candidates.length) break;
         for (const nv of result.noValue) if (!fieldHasValue(nv.field)) FieldFiller.markField(nv.field, 'missing', null);
         for (const f of result.unmatched) if (!fieldHasValue(f)) FieldFiller.markField(f, 'unmatched', null);
+        const handledBefore = seenTotal;
+        seenTotal += candidates.length;
         if (showUi) QuickFillOverlay.showProgress('填写页面',
           `Agent 正在填写剩余字段（第 ${round} 轮），共 ${candidates.length} 项。`,
-          19 + (round - 1) * 24, { phase: 'fill', count: `0/${candidates.length}` });
-        const done = await FieldFiller.fillAll(candidates, cancelled, index => {
-          if (showUi) QuickFillOverlay.showProgress('填写页面',
-            `Agent 正在填写剩余字段（第 ${round} 轮）。`,
+          19 + (round - 1) * 24, { phase: 'fill', count: stepText(handledBefore, seenTotal) });
+        const done = await FieldFiller.fillAll(candidates, cancelled, (index, info) => {
+          const handled = handledBefore + index;
+          if (info && info.state === 'end') {
+            if (info.ok === true) okFilled++;
+            if (!isLead) reportFillStep(leadId, info, okFilled, handled, seenTotal);
+          }
+          if (!showUi) return;
+          fillStat.filled = okFilled;
+          fillStat.remaining = Math.max(0, seenTotal - handled);
+          QuickFillOverlay.showProgress('填写页面',
+            info ? fieldLine(info) : `Agent 正在填写剩余字段（第 ${round} 轮）。`,
             19 + (round - 1) * 24 + Math.round(20 * index / candidates.length),
-            { phase: 'fill', count: `${index}/${candidates.length}` });
+            { phase: 'fill', count: stepText(handled, seenTotal) });
         }, step => {
           if (showUi) QuickFillOverlay.showProgress('AI 辅助点击',
             `启发式与可信输入都没点中，正在第 ${step} 步观察面板并点击。`,
@@ -286,24 +345,31 @@
       try { chrome.runtime.sendMessage({ type: 'frame:fillDone', count, failed, requiredMissing, leadId }).catch(() => {}); } catch (e) {}
       if (showUi) {
         const reqText = requiredMissing ? `，${requiredMissing} 个必填项为空（已红框标出）` : '';
+        const elapsedS = Math.max(1, Math.round(QuickFillOverlay.getElapsed() / 1000));
+        const timeTag = `本次用时 ${elapsedS} 秒`;
         if (leadId !== null && !isTop) {
           QuickFillOverlay.completeProgress('✓ 简历填写完成',
-            `本区域已处理 ${count} 项${reqText}，请检查页面中的填写结果。${failed ? whyText(reasons) : ''}`, 0);
+            `本区域已处理 ${count} 项${reqText}，${timeTag}。请检查页面中的填写结果。${failed ? whyText(reasons) : ''}`, 0);
         } else if (leadId !== null) {
           await new Promise(resolve => setTimeout(resolve, 400));   // 等待其他帧上报
           const total = count + fillSummary.count, totalFailed = failed + fillSummary.failed;
           const totalReq = requiredMissing + fillSummary.requiredMissing;
           fillSummary = { count: 0, failed: 0, requiredMissing: 0 };
-          const saved = Math.max(3, total * 4);
+          const saved = total * 4;   // 人工录一项约 4 秒，这是「省了多少」的估算口径（不是本次用时）
           const reqSuffix = totalReq ? `已标出 ${totalReq} 个必填项为空，请重点核对。` : '';
           QuickFillOverlay.completeProgress('✓ 简历填写完成',
-            `为你节省约 ${saved} 秒，请检查页面中的填写结果。${totalFailed ? `（${totalFailed} 项需人工处理）` : ''}`
-            + (reqSuffix ? ' ' + reqSuffix : ''), saved);
+            `${timeTag}，按每项约 4 秒估算，手动录入这 ${total} 项大约要 ${saved} 秒。`
+            + (totalFailed ? `（${totalFailed} 项需人工处理）` : '') + (reqSuffix ? ' ' + reqSuffix : ''), saved);
         } else {
           QuickFillOverlay.completeProgress('✓ 简历填写完成',
-            `已处理 ${count} 项${failed ? `，${failed} 项需人工处理` + whyText(reasons) : ''}${reqText}。请逐项核对后自行提交。`,
-            Math.max(3, count * 4));
+            `已处理 ${count} 项${failed ? `，${failed} 项需人工处理` + whyText(reasons) : ''}${reqText}。${timeTag}。请逐项核对后自行提交。`,
+            count * 4);
         }
+        // 简历里缺的项：给一条直达编辑器「未补齐视图」的路，而不是只把格子标红
+        const missingNow = document.querySelectorAll('.__qf_missing').length;
+        if (missingNow) QuickFillOverlay.offerFixMissing(missingNow);
+        // 光晕给一次短提示：有失败/缺必填就橙，全部顺利就绿，5 秒后自己回到常态慢呼吸
+        QuickFillOverlay.setBallState((failed || requiredMissing) ? 'warn' : 'ok');
       } else if (!isTop) {
         reportFrameStats();
       }
@@ -321,8 +387,22 @@
     releaseSelectionClean();
     QuickFillOverlay.stopSelection();
     if (isTop && mounted) { QuickFillOverlay.setBusy(false); QuickFillOverlay.closeProgress(); }
+    FieldFiller.clearFilling();
     FieldFiller.clearMarks(document);
+    otherFrames = new Map();
     fillDone = false;
+  }
+
+  // 中止但保留现场：不清结果标记、不销毁进度窗，让用户看得见「哪些已填、哪些失败」。
+  // doClear 是「一键填写 + 清除标记」两件事，取消只该做前一件。
+  function doStop() {
+    fillToken++;
+    filling = false;
+    releaseSelectionClean();
+    QuickFillOverlay.stopSelection();
+    FieldFiller.clearFilling();
+    otherFrames = new Map();
+    if (isTop && mounted) QuickFillOverlay.setBusy(false);
   }
 
   // ---------- 选区填写 ----------
@@ -445,12 +525,29 @@
       for (const f of unmatched) FieldFiller.markField(f, 'skipped', null);
       res = { matched: matched.length, noValue: noValue.length, skipped: unmatched.length, ok: 0, other: 0, failed: 0, had: 0, reasons: {} };
       let done = 0;
+      const regionLine = (state, mm, r) => {
+        const name = (mm.entry && mm.entry.label) || '未命名字段';
+        const val = mm.entry ? String(mm.entry.value).slice(0, 24) : '';
+        if (state === 'start') return '正在填 ' + name + ' → ' + (val || '（空）');
+        if (state === 'had') return name + ' 已有内容，未覆盖';
+        if (r && r.ok === true) return '已填 ' + name + ' → ' + (val || '（空）');
+        if (r && r.ok === 'other') return name + ' 选了「其他」，请人工确认';
+        return name + ' 没填上：' + (FieldFiller.reasonText(r && r.reason) || '需人工处理');
+      };
       for (const mm of matched) {
         if (cancelled()) break;
-        if (fieldHasValue(mm.field)) { res.had++; continue; }
+        if (fieldHasValue(mm.field)) {
+          res.had++;
+          if (isTop && mounted) QuickFillOverlay.showProgress('填写选区', regionLine('had', mm),
+            18 + Math.round(70 * done / Math.max(1, matched.length)), { phase: 'fill', count: stepText(done, matched.length) });
+          continue;
+        }
+        FieldFiller.markField(mm.field, 'filling', mm);
+        if (isTop && mounted) QuickFillOverlay.showProgress('填写选区', regionLine('start', mm),
+          18 + Math.round(70 * done / Math.max(1, matched.length)), { phase: 'fill', count: stepText(done, matched.length) });
         let r = { ok: false, reason: 'exception' };
         try { r = await FieldFiller.fillMatch(mm, { label: mm.entry && mm.entry.label, cancelled }); } catch (e) { /* 保持失败态 */ }
-        if (cancelled()) break;
+        if (cancelled()) { FieldFiller.dropFilling(mm.field); break; }
         if (r.ok === true) { res.ok++; FieldFiller.markField(mm.field, 'filled', mm); }
         else if (r.ok === 'other') { res.other++; FieldFiller.markField(mm.field, 'filled-other', mm); }
         else {
@@ -462,16 +559,17 @@
             try { await navigator.clipboard.writeText(String(mm.entry.value)); } catch (e) {}
           }
         }
+        FieldFiller.flashLand(mm.field);
         done++;
         if (isTop && mounted) {
-          QuickFillOverlay.showProgress('填写选区',
-            '正在把' + scope + '写入选中的控件（' + done + '/' + matched.length + '）。',
-            18 + Math.round(70 * done / Math.max(1, matched.length)), { phase: 'fill' });
+          QuickFillOverlay.showProgress('填写选区', regionLine('end', mm, r),
+            18 + Math.round(70 * done / Math.max(1, matched.length)), { phase: 'fill', count: stepText(done, matched.length) });
         }
       }
     } finally {
       if (myToken === fillToken) {
         filling = false;
+        // 选区路径的进度窗用完仍必须销毁（region-helper 断言选区结束后 .qf-shade 数为 0）
         if (isTop && mounted) { QuickFillOverlay.setBusy(false); QuickFillOverlay.closeProgress(); updateOverlay(); }
       }
     }
@@ -649,11 +747,14 @@
       chrome.runtime.sendMessage({ type: 'frame:fill' }).catch(() => { QuickFillOverlay.setBusy(false); QuickFillOverlay.toast('消息发送失败，请刷新网页后重试。', 'danger'); });
     },
     onStop: () => {
-      fillToken++; filling = false;
-      releaseSelectionClean();
-      QuickFillOverlay.setBusy(false); QuickFillOverlay.closeProgress();
-      chrome.runtime.sendMessage({ type: 'frame:clear' }).catch(() => {});
-      QuickFillOverlay.toast('已停止继续填写；已填入的内容不会被清空，请人工检查。', 'warn');
+      const wasFilling = filling;
+      const stat = { filled: fillStat.filled, remaining: fillStat.remaining };
+      doStop();
+      if (!wasFilling) { QuickFillOverlay.toast('这一轮填写已经跑完了，无需停止；要看结果请核对页面。', 'info'); return; }
+      QuickFillOverlay.showCancelled(stat);
+      chrome.runtime.sendMessage({ type: 'frame:stop' }).catch(() => {});
+      QuickFillOverlay.toast('已停止继续填写：本区域已填 ' + stat.filled + ' 项、这一轮还有 ' + stat.remaining
+        + ' 项没处理。页面上已写入的内容和描边都保持不变，可以接着手动补，或再点一次一键填写。', 'warn');
     },
     onClear: () => {
       doClear();
@@ -671,6 +772,12 @@
     },
     onManage: () => {
       const url = chrome.runtime.getURL('popup/editor.html') + (resume ? '?id=' + resume.id : '');
+      window.open(url, '_blank');
+    },
+    onFixMissing: () => {
+      // 带 missing=1 打开编辑器，进去直接是「只看未补齐项」的视图
+      const url = chrome.runtime.getURL('popup/editor.html')
+        + (resume ? '?id=' + resume.id + '&missing=1' : '?missing=1');
       window.open(url, '_blank');
     },
     onRegion: () => { startRegionFill(); },
@@ -737,10 +844,17 @@
         case 'doClear':
           doClear();
           break;
+        case 'doStop':
+          doStop();
+          break;
         case 'frame:fillSummary':
           fillSummary.count += msg.count || 0;
           fillSummary.failed += msg.failed || 0;
           fillSummary.requiredMissing += msg.requiredMissing || 0;
+          break;
+        case 'frame:stepSummary':
+          if (msg.from != null) otherFrames.set(msg.from, { ok: msg.ok || 0, done: msg.done || 0 });
+          QuickFillOverlay.setProgressOther(otherFilledText());
           break;
         case 'forceShow': {
           ensureMounted();
