@@ -365,6 +365,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true });
           break;
         }
+        // 扩展页收不到就直接转一跳：内容脚本只认 chrome.tabs.sendMessage 进来的消息
+        case 'settings:changed': {
+          await broadcastToTabs({ type: 'settings:updated' });
+          sendResponse({ ok: true });
+          break;
+        }
         case 'frame:matchStats': {
           // iframe 汇总：仅转发给顶层 frame 的 overlay
           if (sender.tab) {

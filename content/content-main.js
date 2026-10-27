@@ -838,7 +838,7 @@
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       switch (msg && msg.type) {
-        case 'settings:changed':
+        case 'settings:updated':
           // 动效开关之类要立刻可见，不能等下一次点开面板或跑完一轮填写
           await loadContext();
           if (isTop && mounted) updateOverlay();

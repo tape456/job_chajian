@@ -75,6 +75,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
   const c = await connect(page.webSocketDebuggerUrl);
   const sample = () => c.ev(SAMPLE);
   await c.send('Page.reload', {});
+  await c.send('Page.bringToFront', {});   // 窗口被遮挡时 Chromium 会静默丢弃真实鼠标事件，可信输入会退化成逐层重试到超时
   await sleep(3200);
 
   console.log('\n[1] 循环动画收敛为「球呼吸 + 一条扫光」，且只在需要时出现');
@@ -97,7 +98,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
   let sawStepCount = false, sweepSamples = [];
   const t0 = Date.now();
   let last = null;
-  while (Date.now() - t0 < 70000) {
+  while (Date.now() - t0 < 100000) {
     await sleep(150);
     const s = await sample();
     if (s.busy) {
@@ -151,6 +152,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
   console.log('\n[4] 两段式取消：第一下上膛，3 秒不确认自动松开');
   // 必须重新加载：表单已被上面那轮填满，candidates 为空会让填写秒完成
   await c.send('Page.reload', {});
+  await c.send('Page.bringToFront', {});   // 窗口被遮挡时 Chromium 会静默丢弃真实鼠标事件，可信输入会退化成逐层重试到超时
   await sleep(3200);
   await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
   await sleep(400);
@@ -175,6 +177,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
 
   console.log('\n[5] 键盘：Esc 一次上膛、两次中止（与鼠标同一套两段式）');
   await c.send('Page.reload', {});
+  await c.send('Page.bringToFront', {});   // 窗口被遮挡时 Chromium 会静默丢弃真实鼠标事件，可信输入会退化成逐层重试到超时
   await sleep(3200);
   await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
   await sleep(400);
@@ -198,6 +201,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
   console.log('\n[6] 上膛后立刻确认：进入结算态并保留现场');
   // 再开一轮：上一轮可能已经自然跑完，那样 showCancelled 会（正确地）拒绝把「跑完」说成「中止」
   await c.send('Page.reload', {});
+  await c.send('Page.bringToFront', {});   // 窗口被遮挡时 Chromium 会静默丢弃真实鼠标事件，可信输入会退化成逐层重试到超时
   await sleep(3200);
   await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
   await sleep(400);
@@ -229,6 +233,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
   await c.ev(`${SHADOW}.querySelector('[data-act=clear]').click()`);
   await sleep(500);
   await c.send('Page.reload', {});
+  await c.send('Page.bringToFront', {});   // 窗口被遮挡时 Chromium 会静默丢弃真实鼠标事件，可信输入会退化成逐层重试到超时
   await sleep(3200);
   await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
   await sleep(400);
@@ -281,6 +286,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
 
   console.log('\n[9] 清除标记仍会一并销毁结算遮罩');
   await c.send('Page.reload', {});
+  await c.send('Page.bringToFront', {});   // 窗口被遮挡时 Chromium 会静默丢弃真实鼠标事件，可信输入会退化成逐层重试到超时
   await sleep(3000);
   await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
   await sleep(400);
@@ -303,20 +309,35 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
   await sleep(1500);
   const cfgCtx = (await targets()).find(x => x.id === cfg.id);
   const cc = cfgCtx ? await connect(cfgCtx.webSocketDebuggerUrl) : null;
+  // 先让页面热起来（点开一次面板会走 analyze → loadContext → applyMotion），此时动效仍是开的
+  await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
+  await sleep(600);
+  await c.ev(`${SHADOW}.querySelector('[data-act=close]').click()`);
+  await sleep(300);
+  const beforeOff = await sample();
+  check('默认状态下球仍在呼吸（动效开着）', beforeOff.haloName === 'qf-halo', beforeOff.haloName);
+  // 关键：写设置 + 广播，全程不刷新页面、也不再点面板
   if (cc) await cc.ev(`chrome.storage.local.get('settings').then(r => chrome.storage.local.set(
     { settings: Object.assign({}, r.settings || {}, { motionEnabled: false }) })).then(() => 'off')`);
-  await c.send('Page.reload', {});
-  await sleep(3200);
-  await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);   // 打开面板会走 analyze → loadContext → applyMotion
-  await sleep(600);
+  if (cc) await cc.ev(`chrome.runtime.sendMessage({ type: 'settings:changed' }).then(() => 'sent').catch(() => 'sent')`);
+  await sleep(1200);
   const still = await sample();
   const stillHost = await c.ev(`document.getElementById('__qf_overlay_host__').classList.contains('qf-still')`);
   check('关掉动效后宿主带上 qf-still 标记', stillHost === true);
   check('关掉动效后球不再呼吸', still.haloName === 'none', still.haloName);
-  check('但品牌色与光晕本身都还在（只撤动画，不撤信息）', still.haloBg.split(' ').join('').indexOf('21,101,255') >= 0, still.haloBg.slice(0, 46));
+  // 只撤动画，颜色信息必须原样保留：此刻球可能处于 warn/ok 短提示态，所以按「任一状态色」判定而不是写死蓝
+  const bgFlat = still.haloBg.split(' ').join('');
+  check('但光晕与颜色都还在（只撤动画，不撤信息）',
+    bgFlat.indexOf('radial-gradient') >= 0
+      && (bgFlat.indexOf('21,101,255') >= 0 || bgFlat.indexOf('217,119,6') >= 0 || bgFlat.indexOf('22,163,74') >= 0),
+    still.haloBg.slice(0, 60));
   if (cc) {
     await cc.ev(`chrome.storage.local.get('settings').then(r => chrome.storage.local.set(
       { settings: Object.assign({}, r.settings || {}, { motionEnabled: true }) })).then(() => 'on')`);
+    await cc.ev(`chrome.runtime.sendMessage({ type: 'settings:changed' }).then(() => 'sent').catch(() => 'sent')`);
+    await sleep(900);
+    const back2 = await sample();
+    check('再打开动效也同样即时生效（回到 qf-halo）', back2.haloName === 'qf-halo', back2.haloName);
     cc.ws.close();
     await fetch('http://127.0.0.1:' + PORT + '/json/close/' + cfg.id).catch(() => {});
     await sleep(400);
@@ -337,6 +358,7 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
     await sleep(400);
   }
   await c.send('Page.reload', {});
+  await c.send('Page.bringToFront', {});   // 窗口被遮挡时 Chromium 会静默丢弃真实鼠标事件，可信输入会退化成逐层重试到超时
   await sleep(3000);
   await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
   await sleep(500);
@@ -352,6 +374,74 @@ const TIME_RE = '[0-9]+(\\.[0-9])?( 秒|:[0-9][0-9])';
   check('缺项数与「去补齐缺项」按钮的显隐一致',
     (fixState.missing > 0) === !fixState.hidden, fixState);
   check('按钮上带缺项条数', fixState.hidden || fixState.text.indexOf(String(fixState.missing)) >= 0, fixState.text);
+
+  console.log('\n[12] 统计列表：问题行优先显示，必填项带徽标并排在前面');
+  await c.ev(`(() => {
+    if (document.getElementById('__qf_tmp_req__')) return 1;
+    const sec = document.createElement('section');
+    sec.id = '__qf_tmp_req__';
+    sec.innerHTML = '<h3>临时必填检查</h3>'
+      + '<label for="qf-tmp-a">宠物名</label><input id="qf-tmp-a" name="qfTmpPet" required>'
+      + '<label for="qf-tmp-b">幸运数字</label><input id="qf-tmp-b" name="qfTmpLucky">';
+    document.body.appendChild(sec);
+    return 1;
+  })()`);
+  // 关面板再开一次，触发 analyze → updateOverlay → setStats
+  await c.ev(`(() => { const s = ${SHADOW}; if (!s.querySelector('.qf-panel').classList.contains('qf-hidden')) s.querySelector('[data-act=close]').click(); return 1; })()`);
+  await sleep(400);
+  await c.ev(`${SHADOW}.querySelector('.qf-ball').click()`);
+  await sleep(1600);
+  const list = await c.ev(`(() => { const s = ${SHADOW};
+    const rows = [...s.querySelectorAll('.qf-list .li')].map(li => ({
+      lab: (li.querySelector('.lab') || {}).textContent || '',
+      req: !!li.querySelector('.qf-req-tag'),
+      dotBg: getComputedStyle(li.querySelector('.dot')).backgroundColor }));
+    const reqIdx = rows.findIndex(r => r.lab.indexOf('宠物名') >= 0);
+    const plainIdx = rows.findIndex(r => r.lab.indexOf('幸运数字') >= 0);
+    return { total: rows.length, reqIdx, plainIdx,
+      reqTag: reqIdx >= 0 ? rows[reqIdx].req : null,
+      plainTag: plainIdx >= 0 ? rows[plainIdx].req : null,
+      reqDotBg: reqIdx >= 0 ? rows[reqIdx].dotBg : '',
+      plainDotBg: plainIdx >= 0 ? rows[plainIdx].dotBg : '' }; })()`);
+  check('必填与未识别行能出现在列表里（不再被上百条已匹配挤出可视区）',
+    list.reqIdx >= 0 && list.plainIdx >= 0, list);
+  check('必填项带「必填」徽标，非必填没有', list.reqTag === true && list.plainTag === false,
+    { reqTag: list.reqTag, plainTag: list.plainTag });
+  check('同一组里必填排在前面', list.reqIdx < list.plainIdx, { reqIdx: list.reqIdx, plainIdx: list.plainIdx });
+  check('必填行的状态点被改成红色，与普通未识别行区分',
+    !!list.reqDotBg && list.reqDotBg !== list.plainDotBg && list.reqDotBg.indexOf('220, 38, 38') >= 0,
+    { req: list.reqDotBg, plain: list.plainDotBg });
+  await c.ev(`(() => { const t = document.getElementById('__qf_tmp_req__'); if (t) t.remove(); return 1; })()`);
+
+  console.log('\n[13] 从 popup 勾选框改设置：整条链（复选框→存储→两跳广播→页面）真的通');
+  // 上一轮正是漏了「把 motionFx 挂进 change 监听数组」，所以必须从 UI 点进去测，不能只写存储
+  const pop = await (await fetch('http://127.0.0.1:' + PORT + '/json/new?' +
+    encodeURIComponent(`chrome-extension://${EXT_ID}/popup/popup.html`), { method: 'PUT' })).json();
+  await sleep(1800);
+  const popCtx = (await targets()).find(x => x.id === pop.id);
+  const pc = popCtx ? await connect(popCtx.webSocketDebuggerUrl) : null;
+  if (pc) {
+    const box = await pc.ev(`(() => { const b = document.getElementById('motionFx');
+      return b ? { found: true, checked: b.checked } : { found: false }; })()`);
+    check('popup 里有「交互动效」复选框', box.found === true, box);
+    await pc.ev(`(() => { const b = document.getElementById('motionFx'); b.checked = false;
+      b.dispatchEvent(new Event('change', { bubbles: true })); return 1; })()`);
+    await sleep(1500);
+    const stored = await pc.ev(`chrome.storage.local.get('settings').then(r => String((r.settings || {}).motionEnabled))`);
+    check('改勾选框会把 motionEnabled 写进存储（漏挂 change 监听就会在这一步红）', stored === 'false', stored);
+    const live = await sample();
+    const liveHost = await c.ev(`document.getElementById('__qf_overlay_host__').classList.contains('qf-still')`);
+    check('存储改动经 background 转发后，测试页不刷新就停止动效', liveHost === true && live.haloName === 'none',
+      { host: liveHost, halo: live.haloName });
+    await pc.ev(`(() => { const b = document.getElementById('motionFx'); b.checked = true;
+      b.dispatchEvent(new Event('change', { bubbles: true })); return 1; })()`);
+    await sleep(1500);
+    const restored = await sample();
+    check('再勾回来也即时生效', restored.haloName === 'qf-halo', restored.haloName);
+    pc.ws.close();
+    await fetch('http://127.0.0.1:' + PORT + '/json/close/' + pop.id).catch(() => {});
+    await sleep(400);
+  }
 
   c.ws.close();
   console.log(`\n========== 动效与取消流程: ${pass} 通过 / ${fail} 失败 ==========`);

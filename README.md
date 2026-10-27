@@ -186,12 +186,16 @@ msedge --load-extension="D:\job_chajian" \
 > 新版 Edge/Chromium 已收紧命令行加载扩展：除 `--disable-features=DisableLoadExtensionCommandLineSwitch` 外，还需 `--enable-unsafe-extension-debugging`（并建议加 `--disable-extensions-except` 只加载本扩展），否则 `--load-extension` 会被忽略。
 > 另注意：**扩展加载后首次使用的 profile 目录建议是全新的**；同一 profile 二次启动时命令行扩展可能不再加载，可换新 `--user-data-dir` 或端口。
 
-测试结果（当前全部通过）：`cdp-test.js` E2E 46/46；`cdp-verify-region-helper.js` 选区/辅助填写等 74/74；`cdp-verify-motion.js` 交互动效 50/50；`cdp-verify-features.js` 上传解析+站点记忆 14/14；`cdp-editor-ui.js` 编辑器 UI 18/18；`cdp-verify-reinject.js` 扩展重载后补注入 5/5；`test-parser.js` 79/79；`test-rules.js` 254/254。
+测试结果（当前全部通过）：`cdp-test.js` E2E 46/46；`cdp-verify-region-helper.js` 选区/辅助填写等 74/74；`cdp-verify-motion.js` 交互动效 60/60；`cdp-verify-features.js` 上传解析+站点记忆 14/14；`cdp-editor-ui.js` 编辑器 UI 18/18；`cdp-verify-reinject.js` 扩展重载后补注入 5/5；`test-parser.js` 98/98；`test-rules.js` 254/254。
 
 测试注意：
 - CDP 测试会先把标签页带到前台并等页面稳定——**后台标签页的 `setTimeout` 会被浏览器节流到秒级**，自定义下拉/级联的轮询等待会放大数倍，导致断言读到"填写中途"状态；
 - 改代码后执行 `node scripts/reload-ext.js <端口>` 再跑测试（扩展 reload 后旧 content script 消息通道失效，测试驱动会自动重载页面）；**若 service worker 处于休眠态会提示未找到，重载页面唤醒后再执行即可**；改动 `content/*.js` 后最稳妥是重启测试浏览器（content script 会被缓存）；
 - 各专项脚本会改动当前简历/站点绑定等状态，**建议每跑一个脚本前重启一次测试浏览器**（或至少按 `cdp-test` → `cdp-editor-ui` → `cdp-verify-region-helper` → `cdp-verify-features` 的顺序）；
+- **每个套件结束都要把标签页导航回 `test/test-form.html`**（`cdp-verify-region-helper.js` 的 [7] 会把它带去 `test-shell-host.html`，不导航回来时下一个套件会直接报「未找到页面目标」）；清理标签页时**务必留一个页面**——关掉最后一个 page 会让整个浏览器进程退出，CDP 直接 ECONNREFUSED；
+- **窗口被其它窗口遮挡时 Chromium 会静默丢弃真实鼠标/键盘事件**（移动事件照常送达），可信输入因此会逐层重试到超时：实测同一次填写从 17 秒恶化到 70 秒以上仍未结束。所有驱动可信输入的脚本必须在 `Page.reload` 之后调 `Page.bringToFront`；
+- **扩展页（popup / editor / records）不能直接把消息发给内容脚本**：`chrome.runtime.sendMessage` 只会到 background 与其它扩展页。要通知页面上的改动，必须走 `扩展页 → background → chrome.tabs.sendMessage` 两跳（见 `resume:changed` → `resume:updated`、`settings:changed` → `settings:updated`）；
+- 测试里往页面插临时 input 时，`id`/`name` 不要含 `name`、`tel`、`date` 等英文词根（会被规则引擎按词边界命中，导致「未识别」类断言找不到目标字段），用 `qfTmpXxx` / `qf-tmp-a` 这类无词根命名；
 - `cdp-test.js` / `cdp-verify-features.js` / `cdp-verify-region-helper.js` 需要先启动本地测试服务（`test-server.js`）与带扩展的 Edge。
 
 ## 隐私说明

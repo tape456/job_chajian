@@ -1470,7 +1470,13 @@
       setNum(ui.nUnmatched, stats.unmatched || 0);
       ui.list.replaceChildren();
       const rows = stats.rows || [];
-      for (const row of rows.slice(0, 60)) {
+      // 以前是 rows.slice(0,60)：大表单上 100 多条「已匹配」会把需要处理的行整个挤出可视区，
+      // 缺项与未识别（含必填）反而一条都看不到。改成先给问题行留位置，再用成功行补齐。
+      const need = rows.filter(r => r.state !== 'ok');
+      const good = rows.filter(r => r.state === 'ok');
+      const needShown = need.slice(0, 40);
+      const shown = needShown.concat(good.slice(0, Math.max(0, 60 - needShown.length)));
+      for (const row of shown) {
         const line = node('div', 'li');
         line.append(node('span', 'dot ' + (row.state || 'unk')), node('span', 'lab', row.label || '未识别'));
         if (row.ai) line.appendChild(node('span', 'qf-ai-tag', 'AI'));
@@ -1480,7 +1486,7 @@
         if (row.el) line.addEventListener('click', () => { row.el.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.el.focus({ preventScroll: true }); });
         ui.list.appendChild(line);
       }
-      if (rows.length > 60) ui.list.appendChild(node('div', 'more', '…其余 ' + (rows.length - 60) + ' 项'));
+      if (rows.length > shown.length) ui.list.appendChild(node('div', 'more', '…其余 ' + (rows.length - shown.length) + ' 项未列出（问题行优先显示）'));
       if (!rows.length) ui.list.appendChild(node('div', 'qf-empty', '尚未识别字段，点击「一键填写」将重新扫描当前页面。'));
     },
     setBusy(busy) {
