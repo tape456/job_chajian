@@ -171,16 +171,19 @@
       }
       for (const nv of matchResult.noValue) {
         rows.push({
-          state: 'miss', el: nv.field.el,
+          state: 'miss', req: !!nv.field.required, el: nv.field.el,
           label: short(nv.signal || '未知字段', 12), value: '简历缺此项，请在简历中补充'
         });
       }
       for (const f of matchResult.unmatched) {
         rows.push({
-          state: 'unk', el: f.el,
+          state: 'unk', req: !!f.required, el: f.el,
           label: short((f.signals || [])[0] || '未知字段', 12), value: '未识别，请手动填写'
         });
       }
+      // 同组里把必填项排前面：面板列表只显示前 60 行，别让「一定会卡住的字段」沉底
+      const RANK = { ok: 0, miss: 1, unk: 2 };
+      rows.sort((a, b) => (RANK[a.state] - RANK[b.state]) || ((b.req ? 1 : 0) - (a.req ? 1 : 0)));
     }
     for (const fs of Object.values(frameExtra)) {
       matched += fs.matched || 0;
@@ -835,6 +838,11 @@
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       switch (msg && msg.type) {
+        case 'settings:changed':
+          // 动效开关之类要立刻可见，不能等下一次点开面板或跑完一轮填写
+          await loadContext();
+          if (isTop && mounted) updateOverlay();
+          break;
         case 'resume:updated':
           await analyze();
           break;

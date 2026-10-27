@@ -204,10 +204,12 @@ async function saveSettings() {
     motionEnabled: els.motionFx.checked
   });
   els.aiConfig.classList.toggle('hidden', !els.aiEnabled.checked);
+  // 通知已打开的页面重新读一次设置：否则动效开关要等下次点开面板或跑一轮填写才生效
+  chrome.runtime.sendMessage({ type: 'settings:changed' }).catch(() => {});
 }
 
 for (const el of [els.autoDetect, els.aiEnabled, els.aiBaseUrl, els.aiApiKey, els.aiModel,
-                   els.parserBaseUrl, els.useOcr, els.aiDomAgent, els.trustedInput]) {
+                   els.parserBaseUrl, els.useOcr, els.aiDomAgent, els.trustedInput, els.motionFx]) {
   el.addEventListener('change', saveSettings);
 }
 

@@ -170,6 +170,9 @@
     .qf-list .val { margin-left: auto; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b98aa; }
     .qf-list .more, .qf-empty { text-align: center; color: #8995a7; padding: 6px; font-size: 11px; }
     .qf-ai-tag { font-size: 10px; color: #6545d4; }
+    .qf-req-tag { font-size: 10px; color: var(--qf-bad); background: #FFF1F0; border: 1px solid #FBD5D0;
+      border-radius: var(--qf-r-pill); padding: 0 5px; line-height: 1.5; flex: none; }
+    .qf-list .li:has(.qf-req-tag) .dot { background: var(--qf-bad); }
     .qf-tool-card { position: relative; overflow: hidden; display: flex; align-items: center; gap: 8px; border: 1px solid var(--qf-border-2);
       border-radius: var(--qf-r-pill); padding: 9px 12px; background: #fff; cursor: pointer; text-align: left; width: 100%;
       transition: background .15s, border-color .15s, transform .12s var(--qf-ease); }
@@ -1471,6 +1474,7 @@
         const line = node('div', 'li');
         line.append(node('span', 'dot ' + (row.state || 'unk')), node('span', 'lab', row.label || '未识别'));
         if (row.ai) line.appendChild(node('span', 'qf-ai-tag', 'AI'));
+        if (row.req) line.appendChild(node('span', 'qf-req-tag', '必填'));
         line.appendChild(node('span', 'val', row.value || ''));
         line.title = (row.label || '') + ' → ' + (row.value || '');
         if (row.el) line.addEventListener('click', () => { row.el.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.el.focus({ preventScroll: true }); });

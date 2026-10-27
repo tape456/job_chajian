@@ -109,6 +109,40 @@ function checkResume(tag, data) {
     ok('点号区间仍然正常（回归保护）', one('工作经历\n2024.06-2024.12 国家电网有限公司 工程师').data.work[0].start === '2024-06');
   }
 
+  console.log('\n[数组板块归位]');
+  {
+    const one = txt => P.parseText(txt, {}).data;
+    const pat = one('专利信息\n一种基于图神经网络的简历匹配方法 ZL202310123456.7 发明专利 第一发明人').patent[0];
+    ok('专利号里不再"抽出"日期', pat.date === '', pat.date);
+    ok('专利号完整保留', pat.number === 'ZL202310123456.7', pat.number);
+    ok('专利类型与发明人各自归位', pat.type === '发明专利' && pat.inventor === '第一发明人', pat.type + '/' + pat.inventor);
+    ok('专利名称不含编号与类型', pat.name === '一种基于图神经网络的简历匹配方法', pat.name);
+    const aw = one('荣誉奖项\n2022-05 校级优秀学生干部').awards[0];
+    ok('获奖的单日期进日期字段', aw.date === '2022-05', aw.date);
+    ok('获奖名称里不再残留日期', aw.name === '校级优秀学生干部', aw.name);
+    const fam = one('家庭情况\n父亲 张国强 1968.03 济南市某机械厂 车间主任').family[0];
+    ok('家庭成员：日期归出生日期而不是职位', fam.birthDate === '1968-03' && !/[0-9]{4}/.test(fam.position), fam.birthDate + '/' + fam.position);
+    ok('家庭成员：机构归工作单位、末段归职位', fam.company === '济南市某机械厂' && fam.position === '车间主任', fam.company + '/' + fam.position);
+    const fam2 = one('家庭情况\n母亲 李秀英 1970.07 群众 济南市某小学 教师').family[0];
+    ok('家庭成员：政治面貌单独归位', fam2.politicalStatus === '群众' && fam2.company === '济南市某小学', fam2.politicalStatus + '/' + fam2.company);
+    const lg = one('外语能力\n英语 CET-6 550分').language[0];
+    ok('语种名不再被整行吞掉', lg.name === '英语', lg.name);
+    ok('证书与成绩分开', lg.certName === 'CET-6' && lg.score === '550', lg.certName + '/' + lg.score);
+    const lg2 = one('外语能力\n法语 DELF B2').language[0];
+    ok('DELF 进证书、B2 进掌握程度', lg2.certName === 'DELF' && lg2.level === 'B2', lg2.certName + '/' + lg2.level);
+    const pp = one('论文发表\n《面向央企网申的结构化信息抽取》 核心期刊 2023年12月 第一作者').paper[0];
+    ok('论文标题取书名号内内容', pp.title === '面向央企网申的结构化信息抽取', pp.title);
+    ok('刊物等级与作者顺序各自归位', pp.level === '核心期刊' && pp.authorship === '第一作者', pp.level + '/' + pp.authorship);
+    ok('论文时间正常', pp.date === '2023-12', pp.date);
+    const ct = one('资格证书\n2023.06 大学英语六级 550分').certificate[0];
+    ok('证书行尾成绩拆到成绩字段', ct.score === '550' && ct.name === '大学英语六级', ct.name + '/' + ct.score);
+    const pr = one('项目经历\n2023.03-2023.09 基于微服务的风控系统 技术负责人\n负责服务拆分').project[0];
+    ok('项目名与项目职务拆分', pr.name === '基于微服务的风控系统' && pr.role === '技术负责人', pr.name + '/' + pr.role);
+    ok('项目起止时间正常', pr.start === '2023-03' && pr.end === '2023-09', pr.start + '~' + pr.end);
+    const pj = one('项目经历\n2023.03-2023.09 校园歌手大赛 组织者').project[0];
+    ok('非职务词不会被误拆成 role', pj.role === '' && pj.name === '校园歌手大赛 组织者', pj.name + '/' + pj.role);
+  }
+
   console.log('\nTOTAL', pass + fail, 'PASS', pass, 'FAIL', fail);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });
